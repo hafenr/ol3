@@ -89,8 +89,48 @@ ol.renderer.canvas.Layer.prototype.composeFrame =
       var dy = goog.vec.Mat4.getElement(imageTransform, 1, 3);
       var dw = image.width * goog.vec.Mat4.getElement(imageTransform, 0, 0);
       var dh = image.height * goog.vec.Mat4.getElement(imageTransform, 1, 1);
-      context.drawImage(image, 0, 0, +image.width, +image.height,
+
+
+
+      // console.log(image);
+
+      var imgCtx = image.getContext('2d');
+      var imgData = imgCtx.getImageData(0, 0, image.width, image.height);
+      var arr = imgData.data;
+      var nPixels = arr.length;
+
+      var min = layerState.min;
+      var max = layerState.max;
+      var divisor = max - min;
+      var color = layerState.color;
+
+      for (var i = 0; i < nPixels; i += 4) {
+        arr[i] = (arr[i] - min) / divisor * color[0];
+        arr[i + 1] = (arr[i + 1] - min) / divisor * color[1];
+        arr[i + 2] = (arr[i + 2] - min) / divisor * color[2];
+      }
+
+      // If we write it back onto image, the source image is somehow used again
+      // in the next render cycle of this resolution. So the images get whiter
+      // and whiter. Therefore we create a new image and don't modify the source.
+      // imgCtx.putImageData(imgData, 0, 0);
+
+      // Create new canvas element and write the modified pixels to it
+      var newCanvas = window['document'].createElement('canvas');
+      var newCanvasCtx = newCanvas.getContext('2d');
+      newCanvas.width = image.width;
+      newCanvas.height = image.height;
+      newCanvasCtx.putImageData(imgData, 0, 0);
+
+      // context.putImageData(imgData, 0, 0);
+      // Then draw the temp image on newCanvas to the screen,
+      // blending it additively in case this is a channel layer.
+      context.drawImage(newCanvas, 0, 0, +image.width, +image.height,
           Math.round(dx), Math.round(dy), Math.round(dw), Math.round(dh));
+
+      // ORIG:
+      // context.drawImage(image, 0, 0, +image.width, +image.height,
+      //     Math.round(dx), Math.round(dy), Math.round(dw), Math.round(dh));
     } else {
       context.setTransform(
           goog.vec.Mat4.getElement(imageTransform, 0, 0),
