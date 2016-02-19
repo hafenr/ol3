@@ -18,10 +18,10 @@ ol.Size;
  * @param {ol.Size} size Size.
  * @param {number} buffer Buffer.
  * @param {ol.Size=} opt_size Optional reusable size array.
- * @return {ol.Size}
+ * @return {ol.Size} The buffered size.
  */
 ol.size.buffer = function(size, buffer, opt_size) {
-  if (!goog.isDef(opt_size)) {
+  if (opt_size === undefined) {
     opt_size = [0, 0];
   }
   opt_size[0] = size[0] + 2 * buffer;
@@ -56,10 +56,10 @@ ol.size.hasArea = function(size) {
  * @param {ol.Size} size Size.
  * @param {number} ratio Ratio.
  * @param {ol.Size=} opt_size Optional reusable size array.
- * @return {ol.Size}
+ * @return {ol.Size} The scaled size.
  */
 ol.size.scale = function(size, ratio, opt_size) {
-  if (!goog.isDef(opt_size)) {
+  if (opt_size === undefined) {
     opt_size = [0, 0];
   }
   opt_size[0] = (size[0] * ratio + 0.5) | 0;
@@ -82,7 +82,7 @@ ol.size.toSize = function(size, opt_size) {
     return size;
   } else {
     goog.asserts.assert(goog.isNumber(size));
-    if (!goog.isDef(opt_size)) {
+    if (opt_size === undefined) {
       opt_size = [size, size];
     } else {
       opt_size[0] = size;

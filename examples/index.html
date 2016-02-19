@@ -18,6 +18,7 @@
         color: #333;
       }
       .example {
+        display: block;
         padding: 10px;
         background-color: #F5F5F5;
         height: 140px;
@@ -170,13 +171,13 @@
         for (var i = 0; i < info.examples.length; ++i) {
           info.examples[i].link += window.location.search;
         }
-        // document.getElementById('keywords').focus();
         template = new jugl.Template("template");
         target = document.getElementById("examples");
         listExamples(info.examples);
         document.getElementById("keywords").onkeyup = inputChange;
         parseQuery();
       };
+
     </script>
 
     <title>OpenLayers 3 Examples</title>
@@ -187,7 +188,7 @@
       <div class="container">
         <a class="navbar-brand" href="./"><img src="./resources/logo-70x70.png">&nbsp;OpenLayers 3 Examples</a>
         <form class="navbar-form navbar-left" role="search">
-          <input name="q" type="text" id="keywords" class="search-query" placeholder="Search">
+          <input name="q" type="text" id="keywords" class="search-query" placeholder="Search" autofocus>
           <span id="count"></span>
         </form>
       </div>
@@ -198,13 +199,13 @@
       <div style="display: none;">
         <div id="template" class="row">
           <div class="col-md-4 col-sm-4" jugl:repeat="example examples">
-            <div class="example">
-              <a jugl:attributes="href example.link" class="mainlink">
+            <a jugl:attributes="href example.link" class="example">
+              <span class="mainlink">
                 <strong><span jugl:replace="example.title">title</span></strong><br>
                 <small jugl:content="'(' + example.example + ')'"></small>
-              </a>
+              </span>
               <p class="description" jugl:content="example.shortdesc"></p>
-            </div>
+            </a>
           </div>
         </div>
       </div>

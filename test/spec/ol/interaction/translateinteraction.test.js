@@ -24,15 +24,15 @@ describe('ol.interaction.Translate', function() {
     source.addFeatures(features);
     var layer = new ol.layer.Vector({source: source});
     map = new ol.Map({
-            target: target,
-            layers: [layer],
-            view: new ol.View({
+      target: target,
+      layers: [layer],
+      view: new ol.View({
         projection: 'EPSG:4326',
         center: [0, 0],
         resolution: 1
-            })
+      })
     });
-    map.on('postrender', function() {
+    map.once('postrender', function() {
       done();
     });
   });
@@ -54,7 +54,7 @@ describe('ol.interaction.Translate', function() {
     var viewport = map.getViewport();
     // calculated in case body has top < 0 (test runner with small window)
     var position = goog.style.getClientPosition(viewport);
-    var shiftKey = goog.isDef(opt_shiftKey) ? opt_shiftKey : false;
+    var shiftKey = opt_shiftKey !== undefined ? opt_shiftKey : false;
     var event = new ol.MapBrowserPointerEvent(type, map,
         new ol.pointer.PointerEvent(type,
         new goog.events.BrowserEvent({

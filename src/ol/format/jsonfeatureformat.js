@@ -6,7 +6,6 @@ goog.require('ol.format.Feature');
 goog.require('ol.format.FormatType');
 
 
-
 /**
  * @classdesc
  * Abstract base class; normally only used for creating subclasses and not
@@ -32,7 +31,7 @@ ol.format.JSONFeature.prototype.getObject_ = function(source) {
     return source;
   } else if (goog.isString(source)) {
     var object = goog.json.parse(source);
-    return goog.isDef(object) ? object : null;
+    return object ? object : null;
   } else {
     goog.asserts.fail();
     return null;

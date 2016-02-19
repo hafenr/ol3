@@ -72,8 +72,7 @@ function flash(feature) {
       snapToPixel: false,
       stroke: new ol.style.Stroke({
         color: 'rgba(255, 0, 0, ' + opacity + ')',
-        width: 1,
-        opacity: opacity
+        width: 1
       })
     });
 
@@ -84,7 +83,7 @@ function flash(feature) {
       return;
     }
     // tell OL3 to continue postcompose animation
-    frameState.animate = true;
+    map.render();
   }
   listenerKey = map.on('postcompose', animate);
 }

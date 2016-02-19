@@ -4,7 +4,6 @@
  */
 
 var path = require('path');
-var url = require('url');
 
 var closure = require('closure-util');
 var nomnom = require('nomnom');
@@ -21,8 +20,9 @@ var createServer = exports.createServer = function(callback) {
   var manager = new closure.Manager({
     lib: [
       'src/**/*.js',
-      'build/ol.ext/*.js',
-    ]
+      'build/ol.ext/*.js'
+    ],
+    cwd: path.join(__dirname, '..')
   });
   manager.on('error', function(err) {
     if (server) {

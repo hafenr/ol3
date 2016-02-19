@@ -1,17 +1,14 @@
 goog.provide('ol.style.Circle');
 
 goog.require('goog.asserts');
-goog.require('goog.dom');
-goog.require('goog.dom.TagName');
+goog.require('ol');
 goog.require('ol.color');
 goog.require('ol.has');
 goog.require('ol.render.canvas');
-goog.require('ol.structs.IHasChecksum');
 goog.require('ol.style.Fill');
 goog.require('ol.style.Image');
 goog.require('ol.style.ImageState');
 goog.require('ol.style.Stroke');
-
 
 
 /**
@@ -21,12 +18,11 @@ goog.require('ol.style.Stroke');
  * @constructor
  * @param {olx.style.CircleOptions=} opt_options Options.
  * @extends {ol.style.Image}
- * @implements {ol.structs.IHasChecksum}
  * @api
  */
 ol.style.Circle = function(opt_options) {
 
-  var options = goog.isDef(opt_options) ? opt_options : {};
+  var options = opt_options || {};
 
   /**
    * @private
@@ -50,13 +46,13 @@ ol.style.Circle = function(opt_options) {
    * @private
    * @type {ol.style.Fill}
    */
-  this.fill_ = goog.isDef(options.fill) ? options.fill : null;
+  this.fill_ = options.fill !== undefined ? options.fill : null;
 
   /**
    * @private
    * @type {ol.style.Stroke}
    */
-  this.stroke_ = goog.isDef(options.stroke) ? options.stroke : null;
+  this.stroke_ = options.stroke !== undefined ? options.stroke : null;
 
   /**
    * @private
@@ -99,7 +95,7 @@ ol.style.Circle = function(opt_options) {
   /**
    * @type {boolean}
    */
-  var snapToPixel = goog.isDef(options.snapToPixel) ?
+  var snapToPixel = options.snapToPixel !== undefined ?
       options.snapToPixel : true;
 
   goog.base(this, {
@@ -116,7 +112,6 @@ goog.inherits(ol.style.Circle, ol.style.Image);
 
 /**
  * @inheritDoc
- * @api
  */
 ol.style.Circle.prototype.getAnchor = function() {
   return this.anchor_;
@@ -178,7 +173,6 @@ ol.style.Circle.prototype.getHitDetectionImageSize = function() {
 
 /**
  * @inheritDoc
- * @api
  */
 ol.style.Circle.prototype.getOrigin = function() {
   return this.origin_;
@@ -197,7 +191,6 @@ ol.style.Circle.prototype.getRadius = function() {
 
 /**
  * @inheritDoc
- * @api
  */
 ol.style.Circle.prototype.getSize = function() {
   return this.size_;
@@ -217,19 +210,19 @@ ol.style.Circle.prototype.getStroke = function() {
 /**
  * @inheritDoc
  */
-ol.style.Circle.prototype.listenImageChange = goog.nullFunction;
+ol.style.Circle.prototype.listenImageChange = ol.nullFunction;
 
 
 /**
  * @inheritDoc
  */
-ol.style.Circle.prototype.load = goog.nullFunction;
+ol.style.Circle.prototype.load = ol.nullFunction;
 
 
 /**
  * @inheritDoc
  */
-ol.style.Circle.prototype.unlistenImageChange = goog.nullFunction;
+ol.style.Circle.prototype.unlistenImageChange = ol.nullFunction;
 
 
 /**
@@ -241,7 +234,7 @@ ol.style.Circle.RenderOptions;
 
 /**
  * @private
- * @param {ol.style.AtlasManager|undefined} atlasManager
+ * @param {ol.style.AtlasManager|undefined} atlasManager An atlas manager.
  */
 ol.style.Circle.prototype.render_ = function(atlasManager) {
   var imageSize;
@@ -249,10 +242,10 @@ ol.style.Circle.prototype.render_ = function(atlasManager) {
   var strokeStyle;
   var strokeWidth = 0;
 
-  if (!goog.isNull(this.stroke_)) {
+  if (this.stroke_) {
     strokeStyle = ol.color.asString(this.stroke_.getColor());
     strokeWidth = this.stroke_.getWidth();
-    if (!goog.isDef(strokeWidth)) {
+    if (strokeWidth === undefined) {
       strokeWidth = ol.render.canvas.defaultLineWidth;
     }
     lineDash = this.stroke_.getLineDash();
@@ -272,10 +265,10 @@ ol.style.Circle.prototype.render_ = function(atlasManager) {
     lineDash: lineDash
   };
 
-  if (!goog.isDef(atlasManager)) {
+  if (atlasManager === undefined) {
     // no atlas manager is used, create a new canvas
     this.canvas_ = /** @type {HTMLCanvasElement} */
-        (goog.dom.createElement(goog.dom.TagName.CANVAS));
+        (document.createElement('CANVAS'));
     this.canvas_.height = size;
     this.canvas_.width = size;
 
@@ -293,19 +286,19 @@ ol.style.Circle.prototype.render_ = function(atlasManager) {
     // an atlas manager is used, add the symbol to an atlas
     size = Math.round(size);
 
-    var hasCustomHitDetectionImage = goog.isNull(this.fill_);
+    var hasCustomHitDetectionImage = !this.fill_;
     var renderHitDetectionCallback;
     if (hasCustomHitDetectionImage) {
       // render the hit-detection image into a separate atlas image
       renderHitDetectionCallback =
-          goog.bind(this.drawHitDetectionCanvas_, this, renderOptions);
+          this.drawHitDetectionCanvas_.bind(this, renderOptions);
     }
 
     var id = this.getChecksum();
     var info = atlasManager.add(
-        id, size, size, goog.bind(this.draw_, this, renderOptions),
+        id, size, size, this.draw_.bind(this, renderOptions),
         renderHitDetectionCallback);
-    goog.asserts.assert(info !== null, 'circle radius is too large');
+    goog.asserts.assert(info, 'circle radius is too large');
 
     this.canvas_ = info.image;
     this.origin_ = [info.offsetX, info.offsetY];
@@ -329,8 +322,8 @@ ol.style.Circle.prototype.render_ = function(atlasManager) {
 
 /**
  * @private
- * @param {ol.style.Circle.RenderOptions} renderOptions
- * @param {CanvasRenderingContext2D} context
+ * @param {ol.style.Circle.RenderOptions} renderOptions Render options.
+ * @param {CanvasRenderingContext2D} context The rendering context.
  * @param {number} x The origin for the symbol (x).
  * @param {number} y The origin for the symbol (y).
  */
@@ -346,14 +339,14 @@ ol.style.Circle.prototype.draw_ = function(renderOptions, context, x, y) {
       renderOptions.size / 2, renderOptions.size / 2,
       this.radius_, 0, 2 * Math.PI, true);
 
-  if (!goog.isNull(this.fill_)) {
+  if (this.fill_) {
     context.fillStyle = ol.color.asString(this.fill_.getColor());
     context.fill();
   }
-  if (!goog.isNull(this.stroke_)) {
+  if (this.stroke_) {
     context.strokeStyle = renderOptions.strokeStyle;
     context.lineWidth = renderOptions.strokeWidth;
-    if (!goog.isNull(renderOptions.lineDash)) {
+    if (renderOptions.lineDash) {
       context.setLineDash(renderOptions.lineDash);
     }
     context.stroke();
@@ -364,11 +357,11 @@ ol.style.Circle.prototype.draw_ = function(renderOptions, context, x, y) {
 
 /**
  * @private
- * @param {ol.style.Circle.RenderOptions} renderOptions
+ * @param {ol.style.Circle.RenderOptions} renderOptions Render options.
  */
 ol.style.Circle.prototype.createHitDetectionCanvas_ = function(renderOptions) {
   this.hitDetectionImageSize_ = [renderOptions.size, renderOptions.size];
-  if (!goog.isNull(this.fill_)) {
+  if (this.fill_) {
     this.hitDetectionCanvas_ = this.canvas_;
     return;
   }
@@ -376,7 +369,7 @@ ol.style.Circle.prototype.createHitDetectionCanvas_ = function(renderOptions) {
   // if no fill style is set, create an extra hit-detection image with a
   // default fill style
   this.hitDetectionCanvas_ = /** @type {HTMLCanvasElement} */
-      (goog.dom.createElement(goog.dom.TagName.CANVAS));
+      (document.createElement('CANVAS'));
   var canvas = this.hitDetectionCanvas_;
 
   canvas.height = renderOptions.size;
@@ -390,13 +383,12 @@ ol.style.Circle.prototype.createHitDetectionCanvas_ = function(renderOptions) {
 
 /**
  * @private
- * @param {ol.style.Circle.RenderOptions} renderOptions
- * @param {CanvasRenderingContext2D} context
+ * @param {ol.style.Circle.RenderOptions} renderOptions Render options.
+ * @param {CanvasRenderingContext2D} context The context.
  * @param {number} x The origin for the symbol (x).
  * @param {number} y The origin for the symbol (y).
  */
-ol.style.Circle.prototype.drawHitDetectionCanvas_ =
-    function(renderOptions, context, x, y) {
+ol.style.Circle.prototype.drawHitDetectionCanvas_ = function(renderOptions, context, x, y) {
   // reset transform
   context.setTransform(1, 0, 0, 1, 0, 0);
 
@@ -408,12 +400,12 @@ ol.style.Circle.prototype.drawHitDetectionCanvas_ =
       renderOptions.size / 2, renderOptions.size / 2,
       this.radius_, 0, 2 * Math.PI, true);
 
-  context.fillStyle = ol.render.canvas.defaultFillStyle;
+  context.fillStyle = ol.color.asString(ol.render.canvas.defaultFillStyle);
   context.fill();
-  if (!goog.isNull(this.stroke_)) {
+  if (this.stroke_) {
     context.strokeStyle = renderOptions.strokeStyle;
     context.lineWidth = renderOptions.strokeWidth;
-    if (!goog.isNull(renderOptions.lineDash)) {
+    if (renderOptions.lineDash) {
       context.setLineDash(renderOptions.lineDash);
     }
     context.stroke();
@@ -423,22 +415,22 @@ ol.style.Circle.prototype.drawHitDetectionCanvas_ =
 
 
 /**
- * @inheritDoc
+ * @return {string} The checksum.
  */
 ol.style.Circle.prototype.getChecksum = function() {
-  var strokeChecksum = !goog.isNull(this.stroke_) ?
+  var strokeChecksum = this.stroke_ ?
       this.stroke_.getChecksum() : '-';
-  var fillChecksum = !goog.isNull(this.fill_) ?
+  var fillChecksum = this.fill_ ?
       this.fill_.getChecksum() : '-';
 
-  var recalculate = goog.isNull(this.checksums_) ||
+  var recalculate = !this.checksums_ ||
       (strokeChecksum != this.checksums_[1] ||
       fillChecksum != this.checksums_[2] ||
       this.radius_ != this.checksums_[3]);
 
   if (recalculate) {
     var checksum = 'c' + strokeChecksum + fillChecksum +
-        (goog.isDef(this.radius_) ? this.radius_.toString() : '-');
+        (this.radius_ !== undefined ? this.radius_.toString() : '-');
     this.checksums_ = [checksum, strokeChecksum, fillChecksum, this.radius_];
   }
 

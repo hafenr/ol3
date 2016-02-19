@@ -5,9 +5,11 @@ goog.require('goog.array');
 goog.require('goog.asserts');
 goog.require('goog.events.Event');
 goog.require('ol.Attribution');
-goog.require('ol.Extent');
 goog.require('ol.ImageState');
 goog.require('ol.array');
+goog.require('ol.extent');
+goog.require('ol.proj');
+goog.require('ol.reproj.Image');
 goog.require('ol.source.Source');
 
 
@@ -20,7 +22,6 @@ goog.require('ol.source.Source');
  *            state: (ol.source.State|undefined)}}
  */
 ol.source.ImageOptions;
-
 
 
 /**
@@ -48,13 +49,27 @@ ol.source.Image = function(options) {
    * @private
    * @type {Array.<number>}
    */
-  this.resolutions_ = goog.isDef(options.resolutions) ?
+  this.resolutions_ = options.resolutions !== undefined ?
       options.resolutions : null;
-  goog.asserts.assert(goog.isNull(this.resolutions_) ||
+  goog.asserts.assert(!this.resolutions_ ||
       goog.array.isSorted(this.resolutions_,
           function(a, b) {
             return b - a;
           }, true), 'resolutions must be null or sorted in descending order');
+
+
+  /**
+   * @private
+   * @type {ol.reproj.Image}
+   */
+  this.reprojectedImage_ = null;
+
+
+  /**
+   * @private
+   * @type {number}
+   */
+  this.reprojectedRevision_ = 0;
 
 };
 goog.inherits(ol.source.Image, ol.source.Source);
@@ -73,9 +88,8 @@ ol.source.Image.prototype.getResolutions = function() {
  * @param {number} resolution Resolution.
  * @return {number} Resolution.
  */
-ol.source.Image.prototype.findNearestResolution =
-    function(resolution) {
-  if (!goog.isNull(this.resolutions_)) {
+ol.source.Image.prototype.findNearestResolution = function(resolution) {
+  if (this.resolutions_) {
     var idx = ol.array.linearFindNearest(this.resolutions_, resolution, 0);
     resolution = this.resolutions_[idx];
   }
@@ -90,7 +104,52 @@ ol.source.Image.prototype.findNearestResolution =
  * @param {ol.proj.Projection} projection Projection.
  * @return {ol.ImageBase} Single image.
  */
-ol.source.Image.prototype.getImage = goog.abstractMethod;
+ol.source.Image.prototype.getImage = function(extent, resolution, pixelRatio, projection) {
+  var sourceProjection = this.getProjection();
+  if (!ol.ENABLE_RASTER_REPROJECTION ||
+      !sourceProjection ||
+      !projection ||
+      ol.proj.equivalent(sourceProjection, projection)) {
+    if (sourceProjection) {
+      projection = sourceProjection;
+    }
+    return this.getImageInternal(extent, resolution, pixelRatio, projection);
+  } else {
+    if (this.reprojectedImage_) {
+      if (this.reprojectedRevision_ == this.getRevision() &&
+          ol.proj.equivalent(
+              this.reprojectedImage_.getProjection(), projection) &&
+          this.reprojectedImage_.getResolution() == resolution &&
+          this.reprojectedImage_.getPixelRatio() == pixelRatio &&
+          ol.extent.equals(this.reprojectedImage_.getExtent(), extent)) {
+        return this.reprojectedImage_;
+      }
+      this.reprojectedImage_.dispose();
+      this.reprojectedImage_ = null;
+    }
+
+    this.reprojectedImage_ = new ol.reproj.Image(
+        sourceProjection, projection, extent, resolution, pixelRatio,
+        function(extent, resolution, pixelRatio) {
+          return this.getImageInternal(extent, resolution,
+              pixelRatio, sourceProjection);
+        }.bind(this));
+    this.reprojectedRevision_ = this.getRevision();
+
+    return this.reprojectedImage_;
+  }
+};
+
+
+/**
+ * @param {ol.Extent} extent Extent.
+ * @param {number} resolution Resolution.
+ * @param {number} pixelRatio Pixel ratio.
+ * @param {ol.proj.Projection} projection Projection.
+ * @return {ol.ImageBase} Single image.
+ * @protected
+ */
+ol.source.Image.prototype.getImageInternal = goog.abstractMethod;
 
 
 /**
@@ -116,6 +175,8 @@ ol.source.Image.prototype.handleImageChange = function(event) {
           new ol.source.ImageEvent(ol.source.ImageEventType.IMAGELOADERROR,
               image));
       break;
+    default:
+      // pass
   }
 };
 
@@ -129,7 +190,6 @@ ol.source.Image.prototype.handleImageChange = function(event) {
 ol.source.Image.defaultImageLoadFunction = function(image, src) {
   image.getImage().src = src;
 };
-
 
 
 /**

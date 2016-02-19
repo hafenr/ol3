@@ -27,7 +27,6 @@ ol.render.EventType = {
 };
 
 
-
 /**
  * @constructor
  * @extends {goog.events.Event}
@@ -53,6 +52,7 @@ ol.render.Event = function(
   this.vectorContext = opt_vectorContext;
 
   /**
+   * An object representing the current render frame state.
    * @type {olx.FrameState|undefined}
    * @api
    */

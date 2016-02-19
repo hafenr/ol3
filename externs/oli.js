@@ -35,6 +35,12 @@ oli.DragBoxEvent = function() {};
 oli.DragBoxEvent.prototype.coordinate;
 
 
+/**
+ * @type {ol.MapBrowserEvent}
+ */
+oli.DragBoxEvent.prototype.mapBrowserEvent;
+
+
 
 /**
  * @interface
@@ -211,6 +217,25 @@ oli.interaction.DragAndDropEvent.prototype.projection;
 oli.interaction.DragAndDropEvent.prototype.file;
 
 
+
+/**
+ * @interface
+ */
+oli.interaction.TranslateEvent = function() {};
+
+
+/**
+ * @type {ol.Collection.<ol.Feature>}
+ */
+oli.interaction.TranslateEvent.prototype.features;
+
+
+/**
+ * @type {ol.Coordinate}
+ */
+oli.interaction.TranslateEvent.prototype.coordinate;
+
+
 /**
  * @type {Object}
  */
@@ -309,6 +334,6 @@ oli.source.VectorEvent = function() {};
 
 
 /**
- * @type {ol.Feature}
+ * @type {ol.Feature|undefined}
  */
 oli.source.VectorEvent.prototype.feature;

@@ -1,11 +1,9 @@
 goog.provide('ol.render.webgl.Immediate');
-goog.require('goog.array');
-goog.require('goog.object');
+goog.require('ol.array');
 goog.require('ol.extent');
 goog.require('ol.render.VectorContext');
 goog.require('ol.render.webgl.ImageReplay');
 goog.require('ol.render.webgl.ReplayGroup');
-
 
 
 /**
@@ -67,7 +65,7 @@ ol.render.webgl.Immediate = function(context,
 
   /**
    * @private
-   * @type {Object.<string,
+   * @type {!Object.<string,
    *        Array.<function(ol.render.webgl.Immediate)>>}
    */
   this.callbacksByZIndex_ = {};
@@ -80,8 +78,8 @@ goog.inherits(ol.render.webgl.Immediate, ol.render.VectorContext);
  */
 ol.render.webgl.Immediate.prototype.flush = function() {
   /** @type {Array.<number>} */
-  var zs = goog.array.map(goog.object.getKeys(this.callbacksByZIndex_), Number);
-  goog.array.sort(zs);
+  var zs = Object.keys(this.callbacksByZIndex_).map(Number);
+  zs.sort(ol.array.numberSafeCompareFunction);
   var i, ii, callbacks, j, jj;
   for (i = 0, ii = zs.length; i < ii; ++i) {
     callbacks = this.callbacksByZIndex_[zs[i].toString()];
@@ -93,6 +91,9 @@ ol.render.webgl.Immediate.prototype.flush = function() {
 
 
 /**
+ * Register a function to be called for rendering at a given zIndex.  The
+ * function will be called asynchronously.  The callback will receive a
+ * reference to {@link ol.render.canvas.Immediate} context for drawing.
  * @param {number} zIndex Z index.
  * @param {function(ol.render.webgl.Immediate)} callback Callback.
  * @api
@@ -100,7 +101,7 @@ ol.render.webgl.Immediate.prototype.flush = function() {
 ol.render.webgl.Immediate.prototype.drawAsync = function(zIndex, callback) {
   var zIndexKey = zIndex.toString();
   var callbacks = this.callbacksByZIndex_[zIndexKey];
-  if (goog.isDef(callbacks)) {
+  if (callbacks !== undefined) {
     callbacks.push(callback);
   } else {
     this.callbacksByZIndex_[zIndexKey] = [callback];
@@ -112,8 +113,7 @@ ol.render.webgl.Immediate.prototype.drawAsync = function(zIndex, callback) {
  * @inheritDoc
  * @api
  */
-ol.render.webgl.Immediate.prototype.drawCircleGeometry =
-    function(circleGeometry, data) {
+ol.render.webgl.Immediate.prototype.drawCircleGeometry = function(circleGeometry, data) {
 };
 
 
@@ -123,12 +123,12 @@ ol.render.webgl.Immediate.prototype.drawCircleGeometry =
  */
 ol.render.webgl.Immediate.prototype.drawFeature = function(feature, style) {
   var geometry = style.getGeometryFunction()(feature);
-  if (!goog.isDefAndNotNull(geometry) ||
+  if (!geometry ||
       !ol.extent.intersects(this.extent_, geometry.getExtent())) {
     return;
   }
   var zIndex = style.getZIndex();
-  if (!goog.isDef(zIndex)) {
+  if (zIndex === undefined) {
     zIndex = 0;
   }
   this.drawAsync(zIndex, function(render) {
@@ -150,8 +150,7 @@ ol.render.webgl.Immediate.prototype.drawFeature = function(feature, style) {
  * @inheritDoc
  * @api
  */
-ol.render.webgl.Immediate.prototype.drawGeometryCollectionGeometry =
-    function(geometryCollectionGeometry, data) {
+ol.render.webgl.Immediate.prototype.drawGeometryCollectionGeometry = function(geometryCollectionGeometry, data) {
   var geometries = geometryCollectionGeometry.getGeometriesArray();
   var renderers = ol.render.webgl.Immediate.GEOMETRY_RENDERERS_;
   var i, ii;
@@ -172,8 +171,7 @@ ol.render.webgl.Immediate.prototype.drawGeometryCollectionGeometry =
  * @inheritDoc
  * @api
  */
-ol.render.webgl.Immediate.prototype.drawPointGeometry =
-    function(pointGeometry, data) {
+ol.render.webgl.Immediate.prototype.drawPointGeometry = function(pointGeometry, data) {
   var context = this.context_;
   var replayGroup = new ol.render.webgl.ReplayGroup(1, this.extent_);
   var replay = /** @type {ol.render.webgl.ImageReplay} */ (
@@ -183,16 +181,12 @@ ol.render.webgl.Immediate.prototype.drawPointGeometry =
   replay.finish(context);
   // default colors
   var opacity = 1;
-  var brightness = 0;
-  var contrast = 1;
-  var hue = 0;
-  var saturation = 1;
   var skippedFeatures = {};
   var featureCallback;
   var oneByOne = false;
   replay.replay(this.context_, this.center_, this.resolution_, this.rotation_,
-      this.size_, this.pixelRatio_, opacity, brightness,
-      contrast, hue, saturation, skippedFeatures, featureCallback, oneByOne);
+      this.size_, this.pixelRatio_, opacity, skippedFeatures, featureCallback,
+      oneByOne);
   replay.getDeleteResourcesFunction(context)();
 };
 
@@ -201,8 +195,7 @@ ol.render.webgl.Immediate.prototype.drawPointGeometry =
  * @inheritDoc
  * @api
  */
-ol.render.webgl.Immediate.prototype.drawLineStringGeometry =
-    function(lineStringGeometry, data) {
+ol.render.webgl.Immediate.prototype.drawLineStringGeometry = function(lineStringGeometry, data) {
 };
 
 
@@ -210,8 +203,7 @@ ol.render.webgl.Immediate.prototype.drawLineStringGeometry =
  * @inheritDoc
  * @api
  */
-ol.render.webgl.Immediate.prototype.drawMultiLineStringGeometry =
-    function(multiLineStringGeometry, data) {
+ol.render.webgl.Immediate.prototype.drawMultiLineStringGeometry = function(multiLineStringGeometry, data) {
 };
 
 
@@ -219,8 +211,7 @@ ol.render.webgl.Immediate.prototype.drawMultiLineStringGeometry =
  * @inheritDoc
  * @api
  */
-ol.render.webgl.Immediate.prototype.drawMultiPointGeometry =
-    function(multiPointGeometry, data) {
+ol.render.webgl.Immediate.prototype.drawMultiPointGeometry = function(multiPointGeometry, data) {
   var context = this.context_;
   var replayGroup = new ol.render.webgl.ReplayGroup(1, this.extent_);
   var replay = /** @type {ol.render.webgl.ImageReplay} */ (
@@ -228,18 +219,13 @@ ol.render.webgl.Immediate.prototype.drawMultiPointGeometry =
   replay.setImageStyle(this.imageStyle_);
   replay.drawMultiPointGeometry(multiPointGeometry, data);
   replay.finish(context);
-  // default colors
   var opacity = 1;
-  var brightness = 0;
-  var contrast = 1;
-  var hue = 0;
-  var saturation = 1;
   var skippedFeatures = {};
   var featureCallback;
   var oneByOne = false;
   replay.replay(this.context_, this.center_, this.resolution_, this.rotation_,
-      this.size_, this.pixelRatio_, opacity, brightness,
-      contrast, hue, saturation, skippedFeatures, featureCallback, oneByOne);
+      this.size_, this.pixelRatio_, opacity, skippedFeatures, featureCallback,
+      oneByOne);
   replay.getDeleteResourcesFunction(context)();
 };
 
@@ -248,8 +234,7 @@ ol.render.webgl.Immediate.prototype.drawMultiPointGeometry =
  * @inheritDoc
  * @api
  */
-ol.render.webgl.Immediate.prototype.drawMultiPolygonGeometry =
-    function(multiPolygonGeometry, data) {
+ol.render.webgl.Immediate.prototype.drawMultiPolygonGeometry = function(multiPolygonGeometry, data) {
 };
 
 
@@ -257,8 +242,7 @@ ol.render.webgl.Immediate.prototype.drawMultiPolygonGeometry =
  * @inheritDoc
  * @api
  */
-ol.render.webgl.Immediate.prototype.drawPolygonGeometry =
-    function(polygonGeometry, data) {
+ol.render.webgl.Immediate.prototype.drawPolygonGeometry = function(polygonGeometry, data) {
 };
 
 
@@ -266,8 +250,7 @@ ol.render.webgl.Immediate.prototype.drawPolygonGeometry =
  * @inheritDoc
  * @api
  */
-ol.render.webgl.Immediate.prototype.drawText =
-    function(flatCoordinates, offset, end, stride, geometry, data) {
+ol.render.webgl.Immediate.prototype.drawText = function(flatCoordinates, offset, end, stride, geometry, data) {
 };
 
 
@@ -275,8 +258,7 @@ ol.render.webgl.Immediate.prototype.drawText =
  * @inheritDoc
  * @api
  */
-ol.render.webgl.Immediate.prototype.setFillStrokeStyle =
-    function(fillStyle, strokeStyle) {
+ol.render.webgl.Immediate.prototype.setFillStrokeStyle = function(fillStyle, strokeStyle) {
 };
 
 
@@ -301,8 +283,8 @@ ol.render.webgl.Immediate.prototype.setTextStyle = function(textStyle) {
  * @const
  * @private
  * @type {Object.<ol.geom.GeometryType,
- *                function(this: ol.render.webgl.Immediate, ol.geom.Geometry,
- *                         Object)>}
+ *      function(this: ol.render.webgl.Immediate,
+ *          (ol.geom.Geometry|ol.render.Feature), Object)>}
  */
 ol.render.webgl.Immediate.GEOMETRY_RENDERERS_ = {
   'Point': ol.render.webgl.Immediate.prototype.drawPointGeometry,

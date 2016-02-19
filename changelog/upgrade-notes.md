@@ -1,5 +1,116 @@
 ## Upgrade notes
 
+### v3.14.0
+
+### v3.13.0
+
+#### `proj4js` integration
+
+Before this release, OpenLayers depended on the global proj4 namespace. When using a module loader like Browserify, you might not want to depend on the global `proj4` namespace. You can use the `ol.proj.setProj4` function to set the proj4 function object. For example in a browserify ES6 environment:
+
+```js
+import ol from 'openlayers';
+import proj4 from 'proj4';
+ol.proj.setProj4(proj4);
+```
+
+#### `ol.source.TileJSON` changes
+
+The `ol.source.TileJSON` now uses `XMLHttpRequest` to load the TileJSON instead of JSONP with callback.
+When using server without proper CORS support, `jsonp: true` option can be passed to the constructor to get the same behavior as before:
+```js
+new ol.source.TileJSON({
+  url: 'http://serverwithoutcors.com/tilejson.json',
+  jsonp: true
+})
+```
+Also for Mapbox v3, make sure you use urls ending with `.json` (which are able to handle both `XMLHttpRequest` and JSONP) instead of `.jsonp`.
+
+### v3.12.0
+
+#### `ol.Map#forEachFeatureAtPixel` changes
+
+The optional `layerFilter` function is now also called for unmanaged layers. To get the same behaviour as before, wrap your layer filter code in an if block like this:
+```js
+function layerFilter(layer) {
+  if (map.getLayers().getArray().indexOf(layer) !== -1) {
+    // existing layer filter code
+  }
+}
+```
+
+### v3.11.0
+
+#### `ol.format.KML` changes
+
+KML icons are scaled 50% so that the rendering better matches Google Earth rendering.
+
+If a KML placemark has a name and is a point, an `ol.style.Text` is created with the name displayed to the right of the icon (if there is an icon).
+This can be controlled with the showPointNames option which defaults to true.
+
+To disable rendering of the point names for placemarks, use the option:
+new ol.format.KML({ showPointNames: false });
+
+
+#### `ol.interaction.DragBox` and `ol.interaction.DragZoom` changes
+
+Styling is no longer done with `ol.Style`, but with pure CSS. The `style` constructor option is no longer required, and no longer available. Instead, there is a `className` option for the CSS selector. The default for `ol.interaction.DragBox` is `ol-dragbox`, and `ol.interaction.DragZoom` uses `ol-dragzoom`. If you previously had
+```js
+new ol.interaction.DragZoom({
+  style: new ol.style.Style({
+    stroke: new ol.style.Stroke({
+      color: 'red',
+      width: 3
+    }),
+    fill: new ol.style.Fill({
+      color: [255, 255, 255, 0.4]
+    })
+  })
+});
+```
+you'll now just need
+```js
+new ol.interaction.DragZoom();
+```
+but with additional css:
+```css
+.ol-dragzoom {
+  border-color: red;
+  border-width: 3px;
+  background-color: rgba(255,255,255,0.4);
+}
+```
+
+#### Removal of `ol.source.TileVector`
+
+With the introduction of true vector tile support, `ol.source.TileVector` becomes obsolete. Change your code to use `ol.layer.VectorTile` and `ol.source.VectorTile` instead of `ol.layer.Vector` and `ol.source.TileVector`.
+
+#### `ol.Map#forEachFeatureAtPixel` changes for unmanaged layers
+
+`ol.Map#forEachFeatureAtPixel` will still be called for unmanaged layers, but the 2nd argument to the callback function will be `null` instead of a reference to the unmanaged layer. This brings back the behavior of the abandoned `ol.FeatureOverlay` that was replaced by unmanaged layers.
+
+If you are affected by this change, please change your unmanaged layer to a regular layer by using e.g. `ol.Map#addLayer` instead of `ol.layer.Layer#setMap`.
+
+### v3.10.0
+
+#### `ol.layer.Layer` changes
+
+The experimental `setHue`, `setContrast`, `setBrightness`, `setSaturation`, and the corresponding getter methods have been removed.  These properties only worked with the WebGL renderer.  If are interested in applying color transforms, look for the `postcompose` event in the API docs.  In addition, the `ol.source.Raster` source provides a way to create new raster data based on arbitrary transforms run on any number of input sources.
+
+### v3.9.0
+
+#### `ol.style.Circle` changes
+
+The experimental `getAnchor`, `getOrigin`, and `getSize` methods have been removed.  The anchor and origin of a circle symbolizer are not modifiable, so these properties should not need to be accessed.  The radius and stroke width can be used to calculate the rendered size of a circle symbolizer if needed:
+
+```js
+// calculate rendered size of a circle symbolizer
+var width = 2 * circle.getRadius();
+if (circle.getStroke()) {
+  width += circle.getStroke().getWidth() + 1;
+}
+```
+
 ### v3.8.0
 
 There should be nothing special required when upgrading from v3.7.0 to v3.8.0.

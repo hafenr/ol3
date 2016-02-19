@@ -2,7 +2,6 @@ goog.provide('ol.format.IGC');
 goog.provide('ol.format.IGCZ');
 
 goog.require('goog.asserts');
-goog.require('goog.string');
 goog.require('goog.string.newlines');
 goog.require('ol.Feature');
 goog.require('ol.format.Feature');
@@ -24,7 +23,6 @@ ol.format.IGCZ = {
 };
 
 
-
 /**
  * @classdesc
  * Feature format for `*.igc` flight recording files.
@@ -36,7 +34,7 @@ ol.format.IGCZ = {
  */
 ol.format.IGC = function(opt_options) {
 
-  var options = goog.isDef(opt_options) ? opt_options : {};
+  var options = opt_options ? opt_options : {};
 
   goog.base(this);
 
@@ -49,7 +47,7 @@ ol.format.IGC = function(opt_options) {
    * @private
    * @type {ol.format.IGCZ}
    */
-  this.altitudeMode_ = goog.isDef(options.altitudeMode) ?
+  this.altitudeMode_ = options.altitudeMode ?
       options.altitudeMode : ol.format.IGCZ.NONE;
 
 };
@@ -164,7 +162,7 @@ ol.format.IGC.prototype.readFeatureFromText = function(text, opt_options) {
       } else {
         m = ol.format.IGC.H_RECORD_RE_.exec(line);
         if (m) {
-          properties[m[1]] = goog.string.trim(m[2]);
+          properties[m[1]] = m[2].trim();
           m = ol.format.IGC.HFDTE_RECORD_RE_.exec(line);
         }
       }
@@ -202,7 +200,7 @@ ol.format.IGC.prototype.readFeatures;
  */
 ol.format.IGC.prototype.readFeaturesFromText = function(text, opt_options) {
   var feature = this.readFeatureFromText(text, opt_options);
-  if (!goog.isNull(feature)) {
+  if (feature) {
     return [feature];
   } else {
     return [];

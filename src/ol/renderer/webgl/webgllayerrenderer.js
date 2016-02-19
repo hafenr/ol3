@@ -2,7 +2,6 @@ goog.provide('ol.renderer.webgl.Layer');
 
 goog.require('goog.vec.Mat4');
 goog.require('goog.webgl');
-goog.require('ol.color.Matrix');
 goog.require('ol.layer.Layer');
 goog.require('ol.render.Event');
 goog.require('ol.render.EventType');
@@ -20,7 +19,6 @@ goog.require('ol.renderer.webgl.map.shader.DefaultFragment');
 goog.require('ol.renderer.webgl.map.shader.DefaultVertex');
 goog.require('ol.webgl.Buffer');
 goog.require('ol.webgl.Context');
-
 
 
 /**
@@ -82,18 +80,6 @@ ol.renderer.webgl.Layer = function(mapRenderer, layer) {
 
   /**
    * @private
-   * @type {ol.color.Matrix}
-   */
-  this.colorMatrix_ = new ol.color.Matrix();
-
-  /**
-   * @private
-   * @type {ol.renderer.webgl.map.shader.Color.Locations}
-   */
-  this.colorLocations_ = null;
-
-  /**
-   * @private
    * @type {ol.renderer.webgl.map.shader.Default.Locations}
    */
   this.defaultLocations_ = null;
@@ -107,12 +93,11 @@ goog.inherits(ol.renderer.webgl.Layer, ol.renderer.Layer);
  * @param {number} framebufferDimension Framebuffer dimension.
  * @protected
  */
-ol.renderer.webgl.Layer.prototype.bindFramebuffer =
-    function(frameState, framebufferDimension) {
+ol.renderer.webgl.Layer.prototype.bindFramebuffer = function(frameState, framebufferDimension) {
 
   var gl = this.mapRenderer.getGL();
 
-  if (!goog.isDef(this.framebufferDimension) ||
+  if (this.framebufferDimension === undefined ||
       this.framebufferDimension != framebufferDimension) {
 
     frameState.postRenderFunctions.push(
@@ -129,22 +114,21 @@ ol.renderer.webgl.Layer.prototype.bindFramebuffer =
               }
             }, gl, this.framebuffer, this.texture));
 
-// <<<<<<< HEAD
-//     var texture = gl.createTexture();
-
-//     gl.bindTexture(goog.webgl.TEXTURE_2D, texture);
-//     gl.texImage2D(goog.webgl.TEXTURE_2D, 0, goog.webgl.RGBA,
-//         framebufferDimension, framebufferDimension, 0, goog.webgl.RGBA,
-//         goog.webgl.UNSIGNED_BYTE, null);
-
-//     gl.texParameteri(goog.webgl.TEXTURE_2D, goog.webgl.TEXTURE_MAG_FILTER,
-//         goog.webgl.LINEAR);
-//     gl.texParameteri(goog.webgl.TEXTURE_2D, goog.webgl.TEXTURE_MIN_FILTER,
-//         goog.webgl.LINEAR);
-// =======
+    // Old stuff var texture = gl.createTexture();
     var texture = ol.webgl.Context.createEmptyTexture(
         gl, framebufferDimension, framebufferDimension);
-// >>>>>>> bad5a97d203c67009d7d4b56a997f66785e47256
+
+    // BEGIN Old stuff
+    gl.bindTexture(goog.webgl.TEXTURE_2D, texture);
+    gl.texImage2D(goog.webgl.TEXTURE_2D, 0, goog.webgl.RGBA,
+        framebufferDimension, framebufferDimension, 0, goog.webgl.RGBA,
+        goog.webgl.UNSIGNED_BYTE, null);
+
+    gl.texParameteri(goog.webgl.TEXTURE_2D, goog.webgl.TEXTURE_MAG_FILTER,
+        goog.webgl.LINEAR);
+    gl.texParameteri(goog.webgl.TEXTURE_2D, goog.webgl.TEXTURE_MIN_FILTER,
+        goog.webgl.LINEAR);
+   // END Old stuff
 
     var framebuffer = gl.createFramebuffer();
     gl.bindFramebuffer(goog.webgl.FRAMEBUFFER, framebuffer);
@@ -167,8 +151,7 @@ ol.renderer.webgl.Layer.prototype.bindFramebuffer =
  * @param {ol.layer.LayerState} layerState Layer state.
  * @param {ol.webgl.Context} context Context.
  */
-ol.renderer.webgl.Layer.prototype.composeFrame =
-    function(frameState, layerState, context) {
+ol.renderer.webgl.Layer.prototype.composeFrame = function(frameState, layerState, context) {
 
   this.dispatchComposeEvent_(
       ol.render.EventType.PRECOMPOSE, context, frameState);
@@ -210,24 +193,13 @@ ol.renderer.webgl.Layer.prototype.composeFrame =
 
   var program = context.getProgram(fragmentShader, vertexShader);
 
-  // FIXME colorLocations_ and defaultLocations_ should be shared somehow
   var locations;
-  if (useColor) {
-    if (goog.isNull(this.colorLocations_)) {
-      locations =
-          new ol.renderer.webgl.map.shader.Color.Locations(gl, program);
-      this.colorLocations_ = locations;
-    } else {
-      locations = this.colorLocations_;
-    }
+  if (!this.defaultLocations_) {
+    locations =
+        new ol.renderer.webgl.map.shader.Default.Locations(gl, program);
+    this.defaultLocations_ = locations;
   } else {
-    if (goog.isNull(this.defaultLocations_)) {
-      locations =
-          new ol.renderer.webgl.map.shader.Default.Locations(gl, program);
-      this.defaultLocations_ = locations;
-    } else {
-      locations = this.defaultLocations_;
-    }
+    locations = this.defaultLocations_;
   }
 
   if (context.useProgram(program)) {
@@ -244,6 +216,7 @@ ol.renderer.webgl.Layer.prototype.composeFrame =
       locations.u_texCoordMatrix, false, this.getTexCoordMatrix());
   gl.uniformMatrix4fv(locations.u_projectionMatrix, false,
       this.getProjectionMatrix());
+
   if (useColor) {
     gl.uniformMatrix4fv(locations.u_colorMatrix, false,
         this.colorMatrix_.getMatrix(
@@ -276,8 +249,7 @@ ol.renderer.webgl.Layer.prototype.composeFrame =
  * @param {olx.FrameState} frameState Frame state.
  * @private
  */
-ol.renderer.webgl.Layer.prototype.dispatchComposeEvent_ =
-    function(type, context, frameState) {
+ol.renderer.webgl.Layer.prototype.dispatchComposeEvent_ = function(type, context, frameState) {
   var layer = this.getLayer();
   if (layer.hasListener(type)) {
     var viewState = frameState.viewState;

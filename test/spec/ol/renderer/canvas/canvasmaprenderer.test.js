@@ -46,22 +46,42 @@ describe('ol.renderer.canvas.Map', function() {
       document.body.removeChild(target);
     });
 
-    it('always includes unmanaged layers', function() {
+    it('calls callback with layer for managed layers', function() {
+      map.addLayer(layer);
+      map.renderSync();
+      var cb = sinon.spy();
+      map.forEachFeatureAtPixel(map.getPixelFromCoordinate([0, 0]), cb);
+      expect(cb).to.be.called();
+      expect(cb.firstCall.args[1]).to.be(layer);
+    });
+
+    it('calls callback with null for unmanaged layers', function() {
       layer.setMap(map);
       map.renderSync();
       var cb = sinon.spy();
-      map.forEachFeatureAtPixel(map.getPixelFromCoordinate([0, 0]), cb, null,
-          function() { return false; });
+      map.forEachFeatureAtPixel(map.getPixelFromCoordinate([0, 0]), cb);
       expect(cb).to.be.called();
+      expect(cb.firstCall.args[1]).to.be(null);
     });
 
     it('filters managed layers', function() {
       map.addLayer(layer);
       map.renderSync();
-      cb = sinon.spy();
+      var cb = sinon.spy();
       map.forEachFeatureAtPixel(map.getPixelFromCoordinate([0, 0]), cb, null,
-          function() { return false; });
+          function() {
+            return false;
+          });
       expect(cb).to.not.be.called();
+    });
+
+    it('doesn\'t fail with layer with no source', function() {
+      map.addLayer(new ol.layer.Tile());
+      map.renderSync();
+      expect(function() {
+        map.forEachFeatureAtPixel(map.getPixelFromCoordinate([0, 0]),
+            function() {});
+      }).to.not.throwException();
     });
 
   });
@@ -78,8 +98,12 @@ describe('ol.renderer.canvas.Map', function() {
       renderer = map.getRenderer();
       renderer.layerRenderers_ = {};
       var layerRenderer = new ol.renderer.canvas.Layer(layer);
-      layerRenderer.prepareFrame = function() { return true; };
-      layerRenderer.getImage = function() { return null; };
+      layerRenderer.prepareFrame = function() {
+        return true;
+      };
+      layerRenderer.getImage = function() {
+        return null;
+      };
       renderer.layerRenderers_[goog.getUid(layer)] = layerRenderer;
     });
 
@@ -92,6 +116,7 @@ goog.require('ol.Feature');
 goog.require('ol.Map');
 goog.require('ol.View');
 goog.require('ol.geom.Point');
+goog.require('ol.layer.Tile');
 goog.require('ol.layer.Vector');
 goog.require('ol.renderer.canvas.Layer');
 goog.require('ol.renderer.canvas.Map');

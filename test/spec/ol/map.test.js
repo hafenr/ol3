@@ -18,6 +18,23 @@ describe('ol.Map', function() {
         expect(interactions.item(i).getMap()).to.be(map);
       }
     });
+
+    it('creates the viewport', function() {
+      var map = new ol.Map({});
+      var viewport = map.getViewport();
+      var className = 'ol-viewport' + (ol.has.TOUCH ? ' ol-touch' : '');
+      expect(viewport.className).to.be(className);
+    });
+
+    it('creates the overlay containers', function() {
+      var map = new ol.Map({});
+      var container = map.getOverlayContainer();
+      expect(container.className).to.be('ol-overlaycontainer');
+
+      var containerStop = map.getOverlayContainerStopEvent();
+      expect(containerStop.className).to.be('ol-overlaycontainer-stopevent');
+    });
+
   });
 
   describe('#addInteraction()', function() {
@@ -133,7 +150,7 @@ describe('ol.Map', function() {
     it('results in an postrender event', function(done) {
 
       map.render();
-      map.on('postrender', function(event) {
+      map.once('postrender', function(event) {
         expect(event).to.be.a(ol.MapEvent);
         var frameState = event.frameState;
         expect(frameState).not.to.be(null);
@@ -147,7 +164,7 @@ describe('ol.Map', function() {
       map.updateSize();
 
       map.render();
-      map.on('postrender', function(event) {
+      map.once('postrender', function(event) {
         expect(event).to.be.a(ol.MapEvent);
         var frameState = event.frameState;
         expect(frameState).to.be(null);
@@ -161,7 +178,7 @@ describe('ol.Map', function() {
       map.updateSize();
 
       map.render();
-      map.on('postrender', function(event) {
+      map.once('postrender', function(event) {
         expect(event).to.be.a(ol.MapEvent);
         var frameState = event.frameState;
         expect(frameState).to.be(null);
@@ -243,6 +260,9 @@ describe('ol.Map', function() {
         var interactions = ol.interaction.defaults(options);
         expect(interactions.getLength()).to.eql(1);
         expect(interactions.item(0)).to.be.a(ol.interaction.MouseWheelZoom);
+        expect(interactions.item(0).useAnchor_).to.eql(true);
+        interactions.item(0).setMouseAnchor(false);
+        expect(interactions.item(0).useAnchor_).to.eql(false);
       });
     });
 
@@ -312,6 +332,69 @@ describe('ol.Map', function() {
       });
     });
 
+    describe('#getOverlayById()', function() {
+      var target, map, overlay, overlay_target;
+
+      beforeEach(function() {
+        target = document.createElement('div');
+        var style = target.style;
+        style.position = 'absolute';
+        style.left = '-1000px';
+        style.top = '-1000px';
+        style.width = '360px';
+        style.height = '180px';
+        document.body.appendChild(target);
+        map = new ol.Map({
+          target: target,
+          view: new ol.View({
+            projection: 'EPSG:4326',
+            center: [0, 0],
+            resolution: 1
+          })
+        });
+        overlay_target = document.createElement('div');
+      });
+
+      afterEach(function() {
+        map.removeOverlay(overlay);
+        goog.dispose(map);
+        document.body.removeChild(target);
+      });
+
+      it('returns an overlay by id', function() {
+        overlay = new ol.Overlay({
+          id: 'foo',
+          element: overlay_target,
+          position: [0, 0]
+        });
+        map.addOverlay(overlay);
+        expect(map.getOverlayById('foo')).to.be(overlay);
+      });
+
+      it('returns null when no overlay is found', function() {
+        overlay = new ol.Overlay({
+          id: 'foo',
+          element: overlay_target,
+          position: [0, 0]
+        });
+        map.addOverlay(overlay);
+        expect(map.getOverlayById('bar')).to.be(null);
+      });
+
+      it('returns null after removing overlay', function() {
+        overlay = new ol.Overlay({
+          id: 'foo',
+          element: overlay_target,
+          position: [0, 0]
+        });
+        map.addOverlay(overlay);
+        expect(map.getOverlayById('foo')).to.be(overlay);
+        map.removeOverlay(overlay);
+        expect(map.getOverlayById('foo')).to.be(null);
+      });
+
+    });
+
   });
 
 });
@@ -322,6 +405,7 @@ goog.require('goog.events.BrowserEvent');
 goog.require('goog.events.EventType');
 goog.require('ol.Map');
 goog.require('ol.MapEvent');
+goog.require('ol.Overlay');
 goog.require('ol.View');
 goog.require('ol.interaction');
 goog.require('ol.interaction.Interaction');

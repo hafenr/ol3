@@ -4,7 +4,6 @@ goog.require('goog.math');
 goog.require('ol.TileRange');
 
 
-
 /**
  * @classdesc
  * An attribution for a layer source.
@@ -38,8 +37,7 @@ ol.Attribution = function(options) {
    * @private
    * @type {Object.<string, Array.<ol.TileRange>>}
    */
-  this.tileRanges_ = goog.isDef(options.tileRanges) ?
-      options.tileRanges : null;
+  this.tileRanges_ = options.tileRanges ? options.tileRanges : null;
 
 };
 
@@ -60,9 +58,8 @@ ol.Attribution.prototype.getHTML = function() {
  * @param {!ol.proj.Projection} projection Projection.
  * @return {boolean} Intersects any tile range.
  */
-ol.Attribution.prototype.intersectsAnyTileRange =
-    function(tileRanges, tileGrid, projection) {
-  if (goog.isNull(this.tileRanges_)) {
+ol.Attribution.prototype.intersectsAnyTileRange = function(tileRanges, tileGrid, projection) {
+  if (!this.tileRanges_) {
     return true;
   }
   var i, ii, tileRange, zKey;
@@ -78,7 +75,7 @@ ol.Attribution.prototype.intersectsAnyTileRange =
         return true;
       }
       var extentTileRange = tileGrid.getTileRangeForExtentAndZ(
-          projection.getExtent(), parseInt(zKey, 10));
+          ol.tilegrid.extentFromProjection(projection), parseInt(zKey, 10));
       var width = extentTileRange.getWidth();
       if (tileRange.minX < extentTileRange.minX ||
           tileRange.maxX > extentTileRange.maxX) {

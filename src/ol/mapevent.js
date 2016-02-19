@@ -26,7 +26,6 @@ ol.MapEventType = {
 };
 
 
-
 /**
  * @classdesc
  * Events emitted as map events are instances of this type.
@@ -55,7 +54,7 @@ ol.MapEvent = function(type, map, opt_frameState) {
    * @type {?olx.FrameState}
    * @api
    */
-  this.frameState = goog.isDef(opt_frameState) ? opt_frameState : null;
+  this.frameState = opt_frameState !== undefined ? opt_frameState : null;
 
 };
 goog.inherits(ol.MapEvent, goog.events.Event);

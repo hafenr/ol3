@@ -6,7 +6,6 @@ goog.require('goog.asserts');
 goog.require('goog.events');
 goog.require('goog.events.Event');
 goog.require('goog.events.EventType');
-goog.require('goog.functions');
 goog.require('goog.object');
 goog.require('goog.vec.Mat4');
 goog.require('ol.ImageCanvas');
@@ -22,7 +21,6 @@ goog.require('ol.renderer.canvas.TileLayer');
 goog.require('ol.source.Image');
 goog.require('ol.source.State');
 goog.require('ol.source.Tile');
-
 
 
 /**
@@ -48,14 +46,14 @@ ol.source.Raster = function(options) {
    * @private
    * @type {ol.raster.OperationType}
    */
-  this.operationType_ = goog.isDef(options.operationType) ?
+  this.operationType_ = options.operationType !== undefined ?
       options.operationType : ol.raster.OperationType.PIXEL;
 
   /**
    * @private
    * @type {number}
    */
-  this.threads_ = goog.isDef(options.threads) ? options.threads : 1;
+  this.threads_ = options.threads !== undefined ? options.threads : 1;
 
   /**
    * @private
@@ -79,8 +77,10 @@ ol.source.Raster = function(options) {
    * @type {ol.TileQueue}
    */
   this.tileQueue_ = new ol.TileQueue(
-      goog.functions.constant(1),
-      goog.bind(this.changed, this));
+      function() {
+        return 1;
+      },
+      this.changed.bind(this));
 
   var layerStatesArray = ol.source.Raster.getLayerStatesArray_(this.renderers_);
   var layerStates = {};
@@ -133,7 +133,7 @@ ol.source.Raster = function(options) {
 
   goog.base(this, {});
 
-  if (goog.isDef(options.operation)) {
+  if (options.operation !== undefined) {
     this.setOperation(options.operation, options.lib);
   }
 
@@ -168,8 +168,7 @@ ol.source.Raster.prototype.setOperation = function(operation, opt_lib) {
  * @return {olx.FrameState} The updated frame state.
  * @private
  */
-ol.source.Raster.prototype.updateFrameState_ =
-    function(extent, resolution, projection) {
+ol.source.Raster.prototype.updateFrameState_ = function(extent, resolution, projection) {
 
   var frameState = /** @type {olx.FrameState} */ (
       goog.object.clone(this.frameState_));
@@ -213,8 +212,7 @@ ol.source.Raster.prototype.isDirty_ = function(extent, resolution) {
 /**
  * @inheritDoc
  */
-ol.source.Raster.prototype.getImage =
-    function(extent, resolution, pixelRatio, projection) {
+ol.source.Raster.prototype.getImage = function(extent, resolution, pixelRatio, projection) {
 
   if (!this.allSourcesReady_()) {
     return null;
@@ -314,13 +312,12 @@ ol.source.Raster.prototype.composeFrame_ = function(frameState, callback) {
  * @param {Object} data The user data.
  * @private
  */
-ol.source.Raster.prototype.onWorkerComplete_ =
-    function(frameState, callback, err, output, data) {
+ol.source.Raster.prototype.onWorkerComplete_ = function(frameState, callback, err, output, data) {
   if (err) {
     callback(err);
     return;
   }
-  if (goog.isNull(output)) {
+  if (!output) {
     // job aborted
     return;
   }
@@ -429,11 +426,9 @@ ol.source.Raster.createRenderers_ = function(sources) {
 ol.source.Raster.createRenderer_ = function(source) {
   var renderer = null;
   if (source instanceof ol.source.Tile) {
-    renderer = ol.source.Raster.createTileRenderer_(
-        /** @type {ol.source.Tile} */ (source));
+    renderer = ol.source.Raster.createTileRenderer_(source);
   } else if (source instanceof ol.source.Image) {
-    renderer = ol.source.Raster.createImageRenderer_(
-        /** @type {ol.source.Image} */ (source));
+    renderer = ol.source.Raster.createImageRenderer_(source);
   } else {
     goog.asserts.fail('Unsupported source type: ' + source);
   }
@@ -471,7 +466,6 @@ ol.source.Raster.createTileRenderer_ = function(source) {
  *            extent: ol.Extent}}
  */
 ol.source.Raster.RenderedState;
-
 
 
 /**

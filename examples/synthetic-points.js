@@ -24,20 +24,20 @@ for (var i = 0; i < count; ++i) {
 }
 
 var styles = {
-  '10': [new ol.style.Style({
+  '10': new ol.style.Style({
     image: new ol.style.Circle({
       radius: 5,
       fill: new ol.style.Fill({color: '#666666'}),
       stroke: new ol.style.Stroke({color: '#bada55', width: 1})
     })
-  })],
-  '20': [new ol.style.Style({
+  }),
+  '20': new ol.style.Style({
     image: new ol.style.Circle({
       radius: 10,
       fill: new ol.style.Fill({color: '#666666'}),
       stroke: new ol.style.Stroke({color: '#bada55', width: 1})
     })
-  })]
+  })
 };
 
 var vectorSource = new ol.source.Vector({
@@ -45,7 +45,7 @@ var vectorSource = new ol.source.Vector({
 });
 var vector = new ol.layer.Vector({
   source: vectorSource,
-  style: function(feature, resolution) {
+  style: function(feature) {
     return styles[feature.get('size')];
   }
 });

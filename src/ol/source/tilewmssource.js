@@ -4,7 +4,6 @@
 
 goog.provide('ol.source.TileWMS');
 
-goog.require('goog.array');
 goog.require('goog.asserts');
 goog.require('goog.math');
 goog.require('goog.object');
@@ -12,7 +11,6 @@ goog.require('goog.string');
 goog.require('goog.uri.utils');
 goog.require('ol');
 goog.require('ol.TileCoord');
-goog.require('ol.TileUrlFunction');
 goog.require('ol.extent');
 goog.require('ol.proj');
 goog.require('ol.size');
@@ -20,7 +18,6 @@ goog.require('ol.source.TileImage');
 goog.require('ol.source.wms');
 goog.require('ol.source.wms.ServerType');
 goog.require('ol.tilecoord');
-
 
 
 /**
@@ -34,9 +31,9 @@ goog.require('ol.tilecoord');
  */
 ol.source.TileWMS = function(opt_options) {
 
-  var options = goog.isDef(opt_options) ? opt_options : {};
+  var options = opt_options || {};
 
-  var params = goog.isDef(options.params) ? options.params : {};
+  var params = options.params !== undefined ? options.params : {};
 
   var transparent = goog.object.get(params, 'TRANSPARENT', true);
 
@@ -46,34 +43,32 @@ ol.source.TileWMS = function(opt_options) {
     logo: options.logo,
     opaque: !transparent,
     projection: options.projection,
+    reprojectionErrorThreshold: options.reprojectionErrorThreshold,
     tileGrid: options.tileGrid,
     tileLoadFunction: options.tileLoadFunction,
-    tileUrlFunction: goog.bind(this.tileUrlFunction_, this),
-    wrapX: goog.isDef(options.wrapX) ? options.wrapX : true
+    url: options.url,
+    urls: options.urls,
+    wrapX: options.wrapX !== undefined ? options.wrapX : true
   });
-
-  var urls = options.urls;
-  if (!goog.isDef(urls) && goog.isDef(options.url)) {
-    urls = ol.TileUrlFunction.expandUrl(options.url);
-  }
-
-  /**
-   * @private
-   * @type {!Array.<string>}
-   */
-  this.urls_ = goog.isDefAndNotNull(urls) ? urls : [];
 
   /**
    * @private
    * @type {number}
    */
-  this.gutter_ = goog.isDef(options.gutter) ? options.gutter : 0;
+  this.gutter_ = options.gutter !== undefined ? options.gutter : 0;
 
   /**
    * @private
    * @type {Object}
    */
   this.params_ = params;
+
+  /**
+   * @private
+   * @type {string}
+   */
+  this.paramsKey_ = '';
+  this.resetParamsKey_();
 
   /**
    * @private
@@ -92,7 +87,7 @@ ol.source.TileWMS = function(opt_options) {
    * @private
    * @type {boolean}
    */
-  this.hidpi_ = goog.isDef(options.hidpi) ? options.hidpi : true;
+  this.hidpi_ = options.hidpi !== undefined ? options.hidpi : true;
 
   /**
    * @private
@@ -127,8 +122,7 @@ goog.inherits(ol.source.TileWMS, ol.source.TileImage);
  * @return {string|undefined} GetFeatureInfo URL.
  * @api stable
  */
-ol.source.TileWMS.prototype.getGetFeatureInfoUrl =
-    function(coordinate, resolution, projection, params) {
+ol.source.TileWMS.prototype.getGetFeatureInfoUrl = function(coordinate, resolution, projection, params) {
 
   goog.asserts.assert(!('VERSION' in params),
       'key VERSION is not allowed in params');
@@ -136,7 +130,7 @@ ol.source.TileWMS.prototype.getGetFeatureInfoUrl =
   var projectionObj = ol.proj.get(projection);
 
   var tileGrid = this.getTileGrid();
-  if (goog.isNull(tileGrid)) {
+  if (!tileGrid) {
     tileGrid = this.getTileGridForProjection(projectionObj);
   }
 
@@ -191,6 +185,14 @@ ol.source.TileWMS.prototype.getGutter = function() {
 /**
  * @inheritDoc
  */
+ol.source.TileWMS.prototype.getKeyParams = function() {
+  return this.paramsKey_;
+};
+
+
+/**
+ * @inheritDoc
+ */
 ol.source.TileWMS.prototype.getKeyZXY = function(z, x, y) {
   return this.coordKeyPrefix_ + goog.base(this, 'getKeyZXY', z, x, y);
 };
@@ -217,12 +219,11 @@ ol.source.TileWMS.prototype.getParams = function() {
  * @return {string|undefined} Request URL.
  * @private
  */
-ol.source.TileWMS.prototype.getRequestUrl_ =
-    function(tileCoord, tileSize, tileExtent,
+ol.source.TileWMS.prototype.getRequestUrl_ = function(tileCoord, tileSize, tileExtent,
         pixelRatio, projection, params) {
 
-  var urls = this.urls_;
-  if (goog.array.isEmpty(urls)) {
+  var urls = this.urls;
+  if (!urls) {
     return undefined;
   }
 
@@ -232,16 +233,14 @@ ol.source.TileWMS.prototype.getRequestUrl_ =
   params[this.v13_ ? 'CRS' : 'SRS'] = projection.getCode();
 
   if (!('STYLES' in this.params_)) {
-    /* jshint -W053 */
     params['STYLES'] = new String('');
-    /* jshint +W053 */
   }
 
   if (pixelRatio != 1) {
     switch (this.serverType_) {
       case ol.source.wms.ServerType.GEOSERVER:
         var dpi = (90 * pixelRatio + 0.5) | 0;
-        if (goog.isDef(params['FORMAT_OPTIONS'])) {
+        if ('FORMAT_OPTIONS' in params) {
           params['FORMAT_OPTIONS'] += ';dpi:' + dpi;
         } else {
           params['FORMAT_OPTIONS'] = 'dpi:' + dpi;
@@ -285,29 +284,10 @@ ol.source.TileWMS.prototype.getRequestUrl_ =
 
 
 /**
- * @param {number} z Z.
- * @param {number} pixelRatio Pixel ratio.
- * @param {ol.proj.Projection} projection Projection.
- * @return {ol.Size} Size.
+ * @inheritDoc
  */
-ol.source.TileWMS.prototype.getTilePixelSize =
-    function(z, pixelRatio, projection) {
-  var tileSize = goog.base(this, 'getTilePixelSize', z, pixelRatio, projection);
-  if (pixelRatio == 1 || !this.hidpi_ || !goog.isDef(this.serverType_)) {
-    return tileSize;
-  } else {
-    return ol.size.scale(tileSize, pixelRatio, this.tmpSize);
-  }
-};
-
-
-/**
- * Return the URLs used for this WMS source.
- * @return {!Array.<string>} URLs.
- * @api stable
- */
-ol.source.TileWMS.prototype.getUrls = function() {
-  return this.urls_;
+ol.source.TileWMS.prototype.getTilePixelRatio = function(pixelRatio) {
+  return (!this.hidpi_ || this.serverType_ === undefined) ? 1 : pixelRatio;
 };
 
 
@@ -318,14 +298,11 @@ ol.source.TileWMS.prototype.resetCoordKeyPrefix_ = function() {
   var i = 0;
   var res = [];
 
-  var j, jj;
-  for (j = 0, jj = this.urls_.length; j < jj; ++j) {
-    res[i++] = this.urls_[j];
-  }
-
-  var key;
-  for (key in this.params_) {
-    res[i++] = key + '-' + this.params_[key];
+  if (this.urls) {
+    var j, jj;
+    for (j = 0, jj = this.urls.length; j < jj; ++j) {
+      res[i++] = this.urls[j];
+    }
   }
 
   this.coordKeyPrefix_ = res.join('#');
@@ -333,40 +310,25 @@ ol.source.TileWMS.prototype.resetCoordKeyPrefix_ = function() {
 
 
 /**
- * Set the URL to use for requests.
- * @param {string|undefined} url URL.
- * @api stable
- */
-ol.source.TileWMS.prototype.setUrl = function(url) {
-  var urls = goog.isDef(url) ? ol.TileUrlFunction.expandUrl(url) : null;
-  this.setUrls(urls);
-};
-
-
-/**
- * Set the URLs to use for requests.
- * @param {Array.<string>|undefined} urls URLs.
- * @api stable
- */
-ol.source.TileWMS.prototype.setUrls = function(urls) {
-  this.urls_ = goog.isDefAndNotNull(urls) ? urls : [];
-  this.resetCoordKeyPrefix_();
-  this.changed();
-};
-
-
-/**
- * @param {ol.TileCoord} tileCoord Tile coordinate.
- * @param {number} pixelRatio Pixel ratio.
- * @param {ol.proj.Projection} projection Projection.
- * @return {string|undefined} Tile URL.
  * @private
  */
-ol.source.TileWMS.prototype.tileUrlFunction_ =
-    function(tileCoord, pixelRatio, projection) {
+ol.source.TileWMS.prototype.resetParamsKey_ = function() {
+  var i = 0;
+  var res = [];
+  for (var key in this.params_) {
+    res[i++] = key + '-' + this.params_[key];
+  }
+  this.paramsKey_ = res.join('/');
+};
+
+
+/**
+ * @inheritDoc
+ */
+ol.source.TileWMS.prototype.fixedTileUrlFunction = function(tileCoord, pixelRatio, projection) {
 
   var tileGrid = this.getTileGrid();
-  if (goog.isNull(tileGrid)) {
+  if (!tileGrid) {
     tileGrid = this.getTileGridForProjection(projection);
   }
 
@@ -374,7 +336,7 @@ ol.source.TileWMS.prototype.tileUrlFunction_ =
     return undefined;
   }
 
-  if (pixelRatio != 1 && (!this.hidpi_ || !goog.isDef(this.serverType_))) {
+  if (pixelRatio != 1 && (!this.hidpi_ || this.serverType_ === undefined)) {
     pixelRatio = 1;
   }
 
@@ -416,6 +378,7 @@ ol.source.TileWMS.prototype.tileUrlFunction_ =
 ol.source.TileWMS.prototype.updateParams = function(params) {
   goog.object.extend(this.params_, params);
   this.resetCoordKeyPrefix_();
+  this.resetParamsKey_();
   this.updateV13_();
   this.changed();
 };

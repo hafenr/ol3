@@ -3,20 +3,16 @@ goog.provide('ol.test.format.GML');
 var readGeometry = function(format, text, opt_options) {
   var doc = ol.xml.parse(text);
   // we need an intermediate node for testing purposes
-  var node = goog.dom.createElement(goog.dom.TagName.PRE);
+  var node = goog.dom.createElement('PRE');
   node.appendChild(doc.documentElement);
   return format.readGeometryFromNode(node, opt_options);
 };
 
 describe('ol.format.GML2', function() {
 
-  var format, formatWGS84, formatNoSrs;
+  var format;
   beforeEach(function() {
     format = new ol.format.GML2({srsName: 'CRS:84'});
-    formatWGS84 = new ol.format.GML2({
-      srsName: 'urn:x-ogc:def:crs:EPSG:4326'
-    });
-    formatNoSrs = new ol.format.GML2();
   });
 
   describe('#readFeatures', function() {
@@ -284,7 +280,8 @@ describe('ol.format.GML3', function() {
     describe('axis order', function() {
 
       it('can read and write a linestring geometry with ' +
-          'correct axis order', function() {
+          'correct axis order',
+          function() {
             var text =
                 '<gml:LineString xmlns:gml="http://www.opengis.net/gml" ' +
                 '    srsName="urn:x-ogc:def:crs:EPSG:4326">' +
@@ -949,11 +946,10 @@ describe('ol.format.GML3', function() {
   });
 
   describe('when parsing TOPP states WFS with autoconfigure', function() {
-    var features, text, gmlFormat;
+    var features, gmlFormat;
     before(function(done) {
       afterLoadText('spec/ol/format/gml/topp-states-wfs.xml', function(xml) {
         try {
-          text = xml;
           gmlFormat = new ol.format.GML();
           features = gmlFormat.readFeatures(xml);
         } catch (e) {
@@ -1261,7 +1257,6 @@ describe('ol.format.GML3', function() {
 
 
 goog.require('goog.dom');
-goog.require('goog.dom.TagName');
 goog.require('ol.format.GML');
 goog.require('ol.format.GML2');
 goog.require('ol.format.GML3');

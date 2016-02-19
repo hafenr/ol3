@@ -1,7 +1,7 @@
 goog.provide('ol.test.interaction.Select');
 
 describe('ol.interaction.Select', function() {
-  var target, map, source;
+  var target, map, layer, source;
 
   var width = 360;
   var height = 180;
@@ -45,7 +45,7 @@ describe('ol.interaction.Select', function() {
       features: features
     });
 
-    var layer = new ol.layer.Vector({source: source});
+    layer = new ol.layer.Vector({source: source});
 
     map = new ol.Map({
       target: target,
@@ -57,7 +57,7 @@ describe('ol.interaction.Select', function() {
       })
     });
 
-    map.on('postrender', function() {
+    map.once('postrender', function() {
       done();
     });
   });
@@ -79,7 +79,7 @@ describe('ol.interaction.Select', function() {
     var viewport = map.getViewport();
     // calculated in case body has top < 0 (test runner with small window)
     var position = goog.style.getClientPosition(viewport);
-    var shiftKey = goog.isDef(opt_shiftKey) ? opt_shiftKey : false;
+    var shiftKey = opt_shiftKey !== undefined ? opt_shiftKey : false;
     var event = new ol.MapBrowserPointerEvent(type, map,
         new ol.pointer.PointerEvent(type,
             new goog.events.BrowserEvent({
@@ -96,6 +96,16 @@ describe('ol.interaction.Select', function() {
       var select = new ol.interaction.Select();
       expect(select).to.be.a(ol.interaction.Select);
       expect(select).to.be.a(ol.interaction.Interaction);
+    });
+
+    describe('user-provided collection', function() {
+
+      it('uses the user-provided collection', function() {
+        var features = new ol.Collection();
+        var select = new ol.interaction.Select({features: features});
+        expect(select.getFeatures()).to.be(features);
+      });
+
     });
 
   });
@@ -148,8 +158,39 @@ describe('ol.interaction.Select', function() {
     });
   });
 
-  describe('filter features using the filter option', function() {
+  describe('toggle selecting polygons', function() {
     var select;
+
+    beforeEach(function() {
+      select = new ol.interaction.Select({
+        multi: true
+      });
+      map.addInteraction(select);
+    });
+
+    it('with SHIFT + single-click', function() {
+      var listenerSpy = sinon.spy();
+      select.on('select', listenerSpy);
+
+      simulateEvent(ol.MapBrowserEvent.EventType.SINGLECLICK, 10, -20, true);
+
+      expect(listenerSpy.callCount).to.be(1);
+
+      var features = select.getFeatures();
+      expect(features.getLength()).to.equal(4);
+
+      map.renderSync();
+
+      simulateEvent(ol.MapBrowserEvent.EventType.SINGLECLICK, 10, -20, true);
+
+      expect(listenerSpy.callCount).to.be(2);
+
+      features = select.getFeatures();
+      expect(features.getLength()).to.equal(0);
+    });
+  });
+
+  describe('filter features using the filter option', function() {
 
     describe('with multi set to true', function() {
 
@@ -187,6 +228,32 @@ describe('ol.interaction.Select', function() {
       });
     });
 
+  });
+
+  describe('#getLayer(feature)', function() {
+    var interaction;
+
+    beforeEach(function() {
+      interaction = new ol.interaction.Select();
+      map.addInteraction(interaction);
+    });
+    afterEach(function() {
+      map.removeInteraction(interaction);
+    });
+
+    it('returns a layer from a selected feature', function() {
+      var listenerSpy = sinon.spy(function(e) {
+        var feature = e.selected[0];
+        var layer_ = interaction.getLayer(feature);
+        expect(e.selected).to.have.length(1);
+        expect(feature).to.be.a(ol.Feature);
+        expect(layer_).to.be.a(ol.layer.Vector);
+        expect(layer_).to.equal(layer);
+      });
+      interaction.on('select', listenerSpy);
+
+      simulateEvent(ol.MapBrowserEvent.EventType.SINGLECLICK, 10, -20);
+    });
   });
 
   describe('#setActive()', function() {
@@ -269,6 +336,7 @@ goog.require('goog.dispose');
 goog.require('goog.events');
 goog.require('goog.events.BrowserEvent');
 goog.require('goog.style');
+goog.require('ol.Collection');
 goog.require('ol.Feature');
 goog.require('ol.Map');
 goog.require('ol.MapBrowserEvent.EventType');

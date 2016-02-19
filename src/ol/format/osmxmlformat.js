@@ -16,7 +16,6 @@ goog.require('ol.proj');
 goog.require('ol.xml');
 
 
-
 /**
  * @classdesc
  * Feature format for reading data in the
@@ -128,7 +127,6 @@ ol.format.OSMXML.readWay_ = function(node, objectStack) {
  * @param {Node} node Node.
  * @param {Array.<*>} objectStack Object stack.
  * @private
- * @return {ol.Feature|undefined} Track.
  */
 ol.format.OSMXML.readNd_ = function(node, objectStack) {
   goog.asserts.assert(node.nodeType == goog.dom.NodeType.ELEMENT,
@@ -143,7 +141,6 @@ ol.format.OSMXML.readNd_ = function(node, objectStack) {
  * @param {Node} node Node.
  * @param {Array.<*>} objectStack Object stack.
  * @private
- * @return {ol.Feature|undefined} Track.
  */
 ol.format.OSMXML.readTag_ = function(node, objectStack) {
   goog.asserts.assert(node.nodeType == goog.dom.NodeType.ELEMENT,
@@ -169,7 +166,7 @@ ol.format.OSMXML.NAMESPACE_URIS_ = [
  * @type {Object.<string, Object.<string, ol.xml.Parser>>}
  * @private
  */
-ol.format.OSMXML.WAY_PARSERS_ = ol.xml.makeParsersNS(
+ol.format.OSMXML.WAY_PARSERS_ = ol.xml.makeStructureNS(
     ol.format.OSMXML.NAMESPACE_URIS_, {
       'nd': ol.format.OSMXML.readNd_,
       'tag': ol.format.OSMXML.readTag_
@@ -181,7 +178,7 @@ ol.format.OSMXML.WAY_PARSERS_ = ol.xml.makeParsersNS(
  * @type {Object.<string, Object.<string, ol.xml.Parser>>}
  * @private
  */
-ol.format.OSMXML.PARSERS_ = ol.xml.makeParsersNS(
+ol.format.OSMXML.PARSERS_ = ol.xml.makeStructureNS(
     ol.format.OSMXML.NAMESPACE_URIS_, {
       'node': ol.format.OSMXML.readNode_,
       'way': ol.format.OSMXML.readWay_
@@ -193,7 +190,7 @@ ol.format.OSMXML.PARSERS_ = ol.xml.makeParsersNS(
  * @type {Object.<string, Object.<string, ol.xml.Parser>>}
  * @private
  */
-ol.format.OSMXML.NODE_PARSERS_ = ol.xml.makeParsersNS(
+ol.format.OSMXML.NODE_PARSERS_ = ol.xml.makeStructureNS(
     ol.format.OSMXML.NAMESPACE_URIS_, {
       'tag': ol.format.OSMXML.readTag_
     });
@@ -223,7 +220,7 @@ ol.format.OSMXML.prototype.readFeaturesFromNode = function(node, opt_options) {
       nodes: {},
       features: []
     }, ol.format.OSMXML.PARSERS_, node, [options]);
-    if (goog.isDef(state.features)) {
+    if (state.features) {
       return state.features;
     }
   }

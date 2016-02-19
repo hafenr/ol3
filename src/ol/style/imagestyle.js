@@ -23,11 +23,11 @@ ol.style.ImageState = {
 ol.style.ImageOptions;
 
 
-
 /**
  * @classdesc
  * A base class used for creating subclasses and not instantiated in
- * apps. Base class for {@link ol.style.Icon} and {@link ol.style.Circle}.
+ * apps. Base class for {@link ol.style.Icon}, {@link ol.style.Circle} and
+ * {@link ol.style.RegularShape}.
  *
  * @constructor
  * @param {ol.style.ImageOptions} options Options.
@@ -119,6 +119,8 @@ ol.style.Image.prototype.getSnapToPixel = function() {
 
 
 /**
+ * Get the anchor point.  The anchor determines the center point for the
+ * symbolizer.  Its units are determined by `anchorXUnits` and `anchorYUnits`.
  * @function
  * @return {Array.<number>} Anchor.
  */
@@ -126,6 +128,7 @@ ol.style.Image.prototype.getAnchor = goog.abstractMethod;
 
 
 /**
+ * Get the image element for the symbolizer.
  * @function
  * @param {number} pixelRatio Pixel ratio.
  * @return {HTMLCanvasElement|HTMLVideoElement|Image} Image element.
@@ -159,6 +162,7 @@ ol.style.Image.prototype.getHitDetectionImageSize = goog.abstractMethod;
 
 
 /**
+ * Get the origin of the symbolizer.
  * @function
  * @return {Array.<number>} Origin.
  */
@@ -166,6 +170,7 @@ ol.style.Image.prototype.getOrigin = goog.abstractMethod;
 
 
 /**
+ * Get the size of the symbolizer (in pixels).
  * @function
  * @return {ol.Size} Size.
  */
@@ -176,6 +181,7 @@ ol.style.Image.prototype.getSize = goog.abstractMethod;
  * Set the opacity.
  *
  * @param {number} opacity Opacity.
+ * @api
  */
 ol.style.Image.prototype.setOpacity = function(opacity) {
   this.opacity_ = opacity;

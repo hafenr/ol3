@@ -3,7 +3,6 @@
 
 goog.provide('ol.format.GeoJSON');
 
-goog.require('goog.array');
 goog.require('goog.asserts');
 goog.require('goog.object');
 goog.require('ol.Feature');
@@ -19,7 +18,6 @@ goog.require('ol.geom.Polygon');
 goog.require('ol.proj');
 
 
-
 /**
  * @classdesc
  * Feature format for reading and writing data in the GeoJSON format.
@@ -31,7 +29,7 @@ goog.require('ol.proj');
  */
 ol.format.GeoJSON = function(opt_options) {
 
-  var options = goog.isDef(opt_options) ? opt_options : {};
+  var options = opt_options ? opt_options : {};
 
   goog.base(this);
 
@@ -39,7 +37,7 @@ ol.format.GeoJSON = function(opt_options) {
    * @inheritDoc
    */
   this.defaultDataProjection = ol.proj.get(
-      goog.isDefAndNotNull(options.defaultDataProjection) ?
+      options.defaultDataProjection ?
           options.defaultDataProjection : 'EPSG:4326');
 
 
@@ -69,12 +67,11 @@ ol.format.GeoJSON.EXTENSIONS_ = ['.geojson'];
  * @return {ol.geom.Geometry} Geometry.
  */
 ol.format.GeoJSON.readGeometry_ = function(object, opt_options) {
-  if (goog.isNull(object)) {
+  if (!object) {
     return null;
   }
   var geometryReader = ol.format.GeoJSON.GEOMETRY_READERS_[object.type];
-  goog.asserts.assert(goog.isDef(geometryReader),
-      'geometryReader should be defined');
+  goog.asserts.assert(geometryReader, 'geometryReader should be defined');
   return /** @type {ol.geom.Geometry} */ (
       ol.format.Feature.transformWithOptions(
           geometryReader(object), false, opt_options));
@@ -91,7 +88,7 @@ ol.format.GeoJSON.readGeometryCollectionGeometry_ = function(
     object, opt_options) {
   goog.asserts.assert(object.type == 'GeometryCollection',
       'object.type should be GeometryCollection');
-  var geometries = goog.array.map(object.geometries,
+  var geometries = object.geometries.map(
       /**
        * @param {GeoJSONGeometry} geometry Geometry.
        * @return {ol.geom.Geometry} geometry Geometry.
@@ -183,8 +180,7 @@ ol.format.GeoJSON.readPolygonGeometry_ = function(object) {
  */
 ol.format.GeoJSON.writeGeometry_ = function(geometry, opt_options) {
   var geometryWriter = ol.format.GeoJSON.GEOMETRY_WRITERS_[geometry.getType()];
-  goog.asserts.assert(goog.isDef(geometryWriter),
-      'geometryWriter should be defined');
+  goog.asserts.assert(geometryWriter, 'geometryWriter should be defined');
   return geometryWriter(/** @type {ol.geom.Geometry} */ (
       ol.format.Feature.transformWithOptions(geometry, true, opt_options)),
       opt_options);
@@ -214,10 +210,9 @@ ol.format.GeoJSON.writeGeometryCollectionGeometry_ = function(
     geometry, opt_options) {
   goog.asserts.assertInstanceof(geometry, ol.geom.GeometryCollection,
       'geometry should be an ol.geom.GeometryCollection');
-  var geometries = goog.array.map(
-      geometry.getGeometriesArray(), function(geometry) {
-        return ol.format.GeoJSON.writeGeometry_(geometry, opt_options);
-      });
+  var geometries = geometry.getGeometriesArray().map(function(geometry) {
+    return ol.format.GeoJSON.writeGeometry_(geometry, opt_options);
+  });
   return /** @type {GeoJSONGeometryCollection} */ ({
     type: 'GeometryCollection',
     geometries: geometries
@@ -247,8 +242,7 @@ ol.format.GeoJSON.writeLineStringGeometry_ = function(geometry, opt_options) {
  * @private
  * @return {GeoJSONGeometry} GeoJSON geometry.
  */
-ol.format.GeoJSON.writeMultiLineStringGeometry_ =
-    function(geometry, opt_options) {
+ol.format.GeoJSON.writeMultiLineStringGeometry_ = function(geometry, opt_options) {
   goog.asserts.assertInstanceof(geometry, ol.geom.MultiLineString,
       'geometry should be an ol.geom.MultiLineString');
   return /** @type {GeoJSONGeometry} */ ({
@@ -284,7 +278,7 @@ ol.format.GeoJSON.writeMultiPolygonGeometry_ = function(geometry, opt_options) {
   goog.asserts.assertInstanceof(geometry, ol.geom.MultiPolygon,
       'geometry should be an ol.geom.MultiPolygon');
   var right;
-  if (goog.isDef(opt_options)) {
+  if (opt_options) {
     right = opt_options.rightHanded;
   }
   return /** @type {GeoJSONGeometry} */ ({
@@ -320,7 +314,7 @@ ol.format.GeoJSON.writePolygonGeometry_ = function(geometry, opt_options) {
   goog.asserts.assertInstanceof(geometry, ol.geom.Polygon,
       'geometry should be an ol.geom.Polygon');
   var right;
-  if (goog.isDef(opt_options)) {
+  if (opt_options) {
     right = opt_options.rightHanded;
   }
   return /** @type {GeoJSONGeometry} */ ({
@@ -408,14 +402,14 @@ ol.format.GeoJSON.prototype.readFeatureFromObject = function(
   var geometry = ol.format.GeoJSON.readGeometry_(geoJSONFeature.geometry,
       opt_options);
   var feature = new ol.Feature();
-  if (goog.isDef(this.geometryName_)) {
+  if (this.geometryName_) {
     feature.setGeometryName(this.geometryName_);
   }
   feature.setGeometry(geometry);
-  if (goog.isDef(geoJSONFeature.id)) {
+  if (geoJSONFeature.id !== undefined) {
     feature.setId(geoJSONFeature.id);
   }
-  if (goog.isDef(geoJSONFeature.properties)) {
+  if (geoJSONFeature.properties) {
     feature.setProperties(geoJSONFeature.properties);
   }
   return feature;
@@ -488,7 +482,7 @@ ol.format.GeoJSON.prototype.readProjection;
 ol.format.GeoJSON.prototype.readProjectionFromObject = function(object) {
   var geoJSONObject = /** @type {GeoJSONObject} */ (object);
   var crs = geoJSONObject.crs;
-  if (goog.isDefAndNotNull(crs)) {
+  if (crs) {
     if (crs.type == 'name') {
       return ol.proj.get(crs.properties.name);
     } else if (crs.type == 'EPSG') {
@@ -524,32 +518,33 @@ ol.format.GeoJSON.prototype.writeFeature;
  *
  * @param {ol.Feature} feature Feature.
  * @param {olx.format.WriteOptions=} opt_options Write options.
- * @return {Object} Object.
+ * @return {GeoJSONObject} Object.
  * @api stable
  */
 ol.format.GeoJSON.prototype.writeFeatureObject = function(
     feature, opt_options) {
   opt_options = this.adaptOptions(opt_options);
-  var object = {
+
+  var object = /** @type {GeoJSONObject} */ ({
     'type': 'Feature'
-  };
+  });
   var id = feature.getId();
-  if (goog.isDefAndNotNull(id)) {
-    object['id'] = id;
+  if (id !== undefined) {
+    object.id = id;
   }
   var geometry = feature.getGeometry();
-  if (goog.isDefAndNotNull(geometry)) {
-    object['geometry'] =
+  if (geometry) {
+    object.geometry =
         ol.format.GeoJSON.writeGeometry_(geometry, opt_options);
   } else {
-    object['geometry'] = null;
+    object.geometry = null;
   }
   var properties = feature.getProperties();
-  goog.object.remove(properties, feature.getGeometryName());
+  delete properties[feature.getGeometryName()];
   if (!goog.object.isEmpty(properties)) {
-    object['properties'] = properties;
+    object.properties = properties;
   } else {
-    object['properties'] = null;
+    object.properties = null;
   }
   return object;
 };
@@ -572,11 +567,10 @@ ol.format.GeoJSON.prototype.writeFeatures;
  *
  * @param {Array.<ol.Feature>} features Features.
  * @param {olx.format.WriteOptions=} opt_options Write options.
- * @return {Object} GeoJSON Object.
+ * @return {GeoJSONFeatureCollection} GeoJSON Object.
  * @api stable
  */
-ol.format.GeoJSON.prototype.writeFeaturesObject =
-    function(features, opt_options) {
+ol.format.GeoJSON.prototype.writeFeaturesObject = function(features, opt_options) {
   opt_options = this.adaptOptions(opt_options);
   var objects = [];
   var i, ii;

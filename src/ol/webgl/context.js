@@ -1,11 +1,11 @@
 goog.provide('ol.webgl.Context');
 
-goog.require('goog.array');
 goog.require('goog.asserts');
 goog.require('goog.events');
 goog.require('goog.log');
 goog.require('goog.object');
 goog.require('ol');
+goog.require('ol.array');
 goog.require('ol.webgl.Buffer');
 goog.require('ol.webgl.WebGLContextEventType');
 
@@ -17,7 +17,6 @@ goog.require('ol.webgl.WebGLContextEventType');
 ol.webgl.BufferCacheEntry;
 
 
-
 /**
  * @classdesc
  * A WebGL context for accessing low-level WebGL capabilities.
@@ -26,7 +25,6 @@ ol.webgl.BufferCacheEntry;
  * @extends {goog.events.EventTarget}
  * @param {HTMLCanvasElement} canvas Canvas.
  * @param {WebGLRenderingContext} gl GL.
- * @api
  */
 ol.webgl.Context = function(canvas, gl) {
 
@@ -87,13 +85,13 @@ ol.webgl.Context = function(canvas, gl) {
   /**
    * @type {boolean}
    */
-  this.hasOESElementIndexUint = goog.array.contains(
+  this.hasOESElementIndexUint = ol.array.includes(
       ol.WEBGL_EXTENSIONS, 'OES_element_index_uint');
 
   // use the OES_element_index_uint extension if available
   if (this.hasOESElementIndexUint) {
     var ext = gl.getExtension('OES_element_index_uint');
-    goog.asserts.assert(!goog.isNull(ext),
+    goog.asserts.assert(ext,
         'Failed to get extension "OES_element_index_uint"');
   }
 
@@ -203,10 +201,9 @@ ol.webgl.Context.prototype.getGL = function() {
 /**
  * Get the frame buffer for hit detection.
  * @return {WebGLFramebuffer} The hit detection frame buffer.
- * @api
  */
 ol.webgl.Context.prototype.getHitDetectionFramebuffer = function() {
-  if (goog.isNull(this.hitDetectionFramebuffer_)) {
+  if (!this.hitDetectionFramebuffer_) {
     this.initHitDetectionFramebuffer_();
   }
   return this.hitDetectionFramebuffer_;
@@ -358,7 +355,7 @@ ol.webgl.Context.prototype.logger_ = goog.log.getLogger('ol.webgl.Context');
  * @param {WebGLRenderingContext} gl WebGL rendering context.
  * @param {number=} opt_wrapS wrapS.
  * @param {number=} opt_wrapT wrapT.
- * @return {WebGLTexture}
+ * @return {WebGLTexture} The texture.
  * @private
  */
 ol.webgl.Context.createTexture_ = function(gl, opt_wrapS, opt_wrapT) {
@@ -367,11 +364,11 @@ ol.webgl.Context.createTexture_ = function(gl, opt_wrapS, opt_wrapT) {
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
 
-  if (goog.isDef(opt_wrapS)) {
+  if (opt_wrapS !== undefined) {
     gl.texParameteri(
         goog.webgl.TEXTURE_2D, goog.webgl.TEXTURE_WRAP_S, opt_wrapS);
   }
-  if (goog.isDef(opt_wrapT)) {
+  if (opt_wrapT !== undefined) {
     gl.texParameteri(
         goog.webgl.TEXTURE_2D, goog.webgl.TEXTURE_WRAP_T, opt_wrapT);
   }
@@ -386,7 +383,7 @@ ol.webgl.Context.createTexture_ = function(gl, opt_wrapS, opt_wrapT) {
  * @param {number} height Height.
  * @param {number=} opt_wrapS wrapS.
  * @param {number=} opt_wrapT wrapT.
- * @return {WebGLTexture}
+ * @return {WebGLTexture} The texture.
  */
 ol.webgl.Context.createEmptyTexture = function(
     gl, width, height, opt_wrapS, opt_wrapT) {
@@ -404,7 +401,7 @@ ol.webgl.Context.createEmptyTexture = function(
  * @param {HTMLCanvasElement|HTMLImageElement|HTMLVideoElement} image Image.
  * @param {number=} opt_wrapS wrapS.
  * @param {number=} opt_wrapT wrapT.
- * @return {WebGLTexture}
+ * @return {WebGLTexture} The texture.
  */
 ol.webgl.Context.createTexture = function(gl, image, opt_wrapS, opt_wrapT) {
   var texture = ol.webgl.Context.createTexture_(gl, opt_wrapS, opt_wrapT);
