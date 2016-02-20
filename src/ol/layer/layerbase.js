@@ -14,15 +14,17 @@ goog.require('goog.color.Rgb');
  * @enum {string}
  */
 ol.layer.LayerProperty = {
+  BRIGHTNESS: 'brightness',
+  CONTRAST: 'contrast',
+  HUE: 'hue',
   OPACITY: 'opacity',
+  SATURATION: 'saturation',
   VISIBLE: 'visible',
   EXTENT: 'extent',
   Z_INDEX: 'zIndex',
   MAX_RESOLUTION: 'maxResolution',
   MIN_RESOLUTION: 'minResolution',
   ADDITIVE_BLEND: 'additiveBlend',
-  DRAW_BLACK_PIXELS: 'drawBlackPixels',
-  DRAW_WHITE_PIXELS: 'drawWhitePixels',
   SOURCE: 'source',
   COLOR: 'color',
   MAX: 'max',
@@ -41,11 +43,14 @@ ol.layer.LayerProperty = {
  *            min: number,
  *            max: number,
  *            additiveBlend: boolean,
- *            drawBlackPixels: boolean,
- *            drawWhitePixels: boolean,
  *            zIndex: number,
  *            maxResolution: number,
- *            minResolution: number}}
+ *            minResolution: number,
+ *            contrast: number,
+ *            hue: number,
+ *            saturation: number,
+ *            brightness: number
+ *            }}
  */
 ol.layer.LayerState;
 
@@ -71,8 +76,16 @@ ol.layer.Base = function(options) {
    * @type {Object.<string, *>}
    */
   var properties = goog.object.clone(options);
+  properties[ol.layer.LayerProperty.BRIGHTNESS] =
+      options.brightness !== undefined ? options.brightness : 0;
+  properties[ol.layer.LayerProperty.CONTRAST] =
+      options.contrast !== undefined ? options.contrast : 1;
+  properties[ol.layer.LayerProperty.HUE] =
+      options.hue !== undefined ? options.hue : 0;
   properties[ol.layer.LayerProperty.OPACITY] =
       options.opacity !== undefined ? options.opacity : 1;
+  properties[ol.layer.LayerProperty.SATURATION] =
+      options.saturation !== undefined ? options.saturation : 1;
   properties[ol.layer.LayerProperty.VISIBLE] =
       options.visible !== undefined ? options.visible : true;
   properties[ol.layer.LayerProperty.Z_INDEX] =
@@ -90,10 +103,6 @@ ol.layer.Base = function(options) {
       goog.isDef(options.min) ? options.min : 0;
   properties[ol.layer.LayerProperty.ADDITIVE_BLEND] =
       goog.isDef(options.additiveBlend) ? options.additiveBlend : false;
-  properties[ol.layer.LayerProperty.DRAW_BLACK_PIXELS] =
-      goog.isDef(options.drawBlackPixels) ? options.drawBlackPixels : true;
-  properties[ol.layer.LayerProperty.DRAW_WHITE_PIXELS] =
-      goog.isDef(options.drawWhitePixels) ? options.drawWhitePixels : true;
 
   this.setProperties(properties);
 };
@@ -101,38 +110,85 @@ goog.inherits(ol.layer.Base, ol.Object);
 
 
 /**
+ * Return the brightness of the layer.
+ * @return {number} The brightness of the layer.
+ * @observable
+ * @api
+ */
+ol.layer.Base.prototype.getBrightness = function() {
+  return /** @type {number} */ (this.get(ol.layer.LayerProperty.BRIGHTNESS));
+};
+
+
+/**
+ * Return the contrast of the layer.
+ * @return {number} The contrast of the layer.
+ * @observable
+ * @api
+ */
+ol.layer.Base.prototype.getContrast = function() {
+  return /** @type {number} */ (this.get(ol.layer.LayerProperty.CONTRAST));
+};
+
+
+/**
+ * Return the hue of the layer.
+ * @return {number} The hue of the layer.
+ * @observable
+ * @api
+ */
+ol.layer.Base.prototype.getHue = function() {
+  return /** @type {number} */ (this.get(ol.layer.LayerProperty.HUE));
+};
+
+
+/**
+ * Apply a hue-rotation to the layer.  A value of 0 will leave the hue
+ * unchanged.  Other values are radians around the color circle.
+ * @param {number} hue The hue of the layer.
+ * @observable
+ * @api
+ */
+ol.layer.Base.prototype.setHue = function(hue) {
+  this.set(ol.layer.LayerProperty.HUE, hue);
+}
+
+
+/**
  * @return {ol.layer.LayerState} Layer state.
  */
 ol.layer.Base.prototype.getLayerState = function() {
+  var brightness = this.getBrightness();
+  var contrast = this.getContrast();
+  var hue = this.getHue();
   var opacity = this.getOpacity();
+  var saturation = this.getSaturation();
   var sourceState = this.getSourceState();
   var visible = this.getVisible();
   var extent = this.getExtent();
   var zIndex = this.getZIndex();
   var maxResolution = this.getMaxResolution();
   var minResolution = this.getMinResolution();
-
-  // ADDED
   var min = this.getMin();
   var max = this.getMax();
   var color = this.getColor();
   var additiveBlend = this.getAdditiveBlend();
-  var drawBlackPixels = this.getDrawBlackPixels();
-  var drawWhitePixels = this.getDrawWhitePixels();
 
   return {
     layer: /** @type {ol.layer.Layer} */ (this),
     opacity: ol.math.clamp(opacity, 0, 1),
     sourceState: sourceState,
+    brightness: brightness,
+    contrast: contrast,
     visible: visible,
     managed: true,
+    hue: hue,
+    saturation: saturation,
     extent: extent,
-    color: goog.isDef(color) ? color : [1, 1, 1],
-    min: goog.isDef(min) ? min : 0,
-    max: goog.isDef(max) ? max : 1,
+    color: color !== undefined ? color : [1, 1, 1],
+    min: min !== undefined ? min : 0,
+    max: max !== undefined ? max : 1,
     additiveBlend: goog.isDef(additiveBlend) ? additiveBlend : false,
-    drawBlackPixels: goog.isDef(drawBlackPixels) ? drawBlackPixels : true,
-    drawWhitePixels: goog.isDef(drawWhitePixels) ? drawWhitePixels : true,
     zIndex: zIndex,
     maxResolution: maxResolution,
     minResolution: Math.max(minResolution, 0)
@@ -433,56 +489,26 @@ goog.exportProperty(
 
 
 /**
- * @return {boolean|undefined} If black pixels should be drawn.
+ * Return the saturation of the layer.
+ * @return {number} The saturation of the layer.
  * @observable
  * @api
  */
-ol.layer.Base.prototype.getDrawBlackPixels = function() {
-  return /** @type {boolean|undefined} */ (this.get(
-    ol.layer.LayerProperty.DRAW_BLACK_PIXELS));
+ol.layer.Base.prototype.getSaturation = function() {
+  return /** @type {number} */ (this.get(ol.layer.LayerProperty.SATURATION));
 };
-goog.exportProperty(
-    ol.layer.Base.prototype,
-    'getDrawBlackPixels',
-    ol.layer.Base.prototype.getDrawBlackPixels);
 
 /**
- * @param {boolean} doDraw If black pxiels should be drawn.
+ * Adjust layer saturation.  A value of 0 will render the layer completely
+ * unsaturated.  A value of 1 will leave the saturation unchanged.  Other
+ * values are linear multipliers of the effect (and values over 1 are
+ * permitted).
+ *
+ * @param {number} saturation The saturation of the layer.
  * @observable
  * @api
  */
-ol.layer.Base.prototype.setDrawBlackPixels = function(doDraw) {
-  this.set(ol.layer.LayerProperty.DRAW_BLACK_PIXELS, doDraw);
+ol.layer.Base.prototype.setSaturation = function(saturation) {
+  this.set(ol.layer.LayerProperty.SATURATION, saturation);
 };
-goog.exportProperty(
-    ol.layer.Base.prototype,
-    'setDrawBlackPixels',
-    ol.layer.Base.prototype.setDrawBlackPixels);
 
-
-/**
- * @return {boolean|undefined} If white pixels should be drawn.
- * @observable
- * @api
- */
-ol.layer.Base.prototype.getDrawWhitePixels = function() {
-  return /** @type {boolean|undefined} */ (this.get(
-    ol.layer.LayerProperty.DRAW_WHITE_PIXELS));
-};
-goog.exportProperty(
-    ol.layer.Base.prototype,
-    'getDrawWhitePixels',
-    ol.layer.Base.prototype.getDrawWhitePixels);
-
-/**
- * @param {boolean} doDraw If white pixels should be drawn.
- * @observable
- * @api
- */
-ol.layer.Base.prototype.setDrawWhitePixels = function(doDraw) {
-  this.set(ol.layer.LayerProperty.DRAW_WHITE_PIXELS, doDraw);
-};
-goog.exportProperty(
-    ol.layer.Base.prototype,
-    'setDrawWhitePixels',
-    ol.layer.Base.prototype.setDrawWhitePixels);

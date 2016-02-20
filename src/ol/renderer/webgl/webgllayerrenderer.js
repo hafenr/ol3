@@ -2,17 +2,15 @@ goog.provide('ol.renderer.webgl.Layer');
 
 goog.require('goog.vec.Mat4');
 goog.require('goog.webgl');
+goog.require('ol.color.Matrix');
 goog.require('ol.layer.Layer');
 goog.require('ol.render.Event');
 goog.require('ol.render.EventType');
 goog.require('ol.render.webgl.Immediate');
 goog.require('ol.renderer.Layer');
-goog.require('ol.renderer.webgl.map.shader.Color');
-goog.require('ol.renderer.webgl.map.shader.ColorNoWhite');
-goog.require('ol.renderer.webgl.map.shader.ColorNoBlack');
-goog.require('ol.renderer.webgl.map.shader.Color.Locations');
 goog.require('ol.renderer.webgl.map.shader.ColorFragment');
 goog.require('ol.renderer.webgl.map.shader.ColorVertex');
+goog.require('ol.renderer.webgl.map.shader.Color.Locations');
 goog.require('ol.renderer.webgl.map.shader.Default');
 goog.require('ol.renderer.webgl.map.shader.Default.Locations');
 goog.require('ol.renderer.webgl.map.shader.DefaultFragment');
@@ -77,6 +75,19 @@ ol.renderer.webgl.Layer = function(mapRenderer, layer) {
    * @type {!goog.vec.Mat4.Number}
    */
   this.projectionMatrix = goog.vec.Mat4.createNumberIdentity();
+
+
+  /**
+   * @private
+   * @type {ol.color.Matrix}
+   */
+  this.colorMatrix_ = new ol.color.Matrix();
+
+  /**
+   * @private
+   * @type {ol.renderer.webgl.map.shader.Color.Locations}
+   */
+  this.colorLocations_ = null;
 
   /**
    * @private
@@ -162,28 +173,19 @@ ol.renderer.webgl.Layer.prototype.composeFrame = function(frameState, layerState
 
   var useColor =
       layerState.brightness ||
-      layerState.contrast != 1 ||
+      layerState.contrast !== 1 ||
       layerState.hue ||
-      layerState.saturation != 1 ||
+      layerState.saturation !== 1 ||
       layerState.min !== 0 ||
-      layerState.max != 1 ||
+      layerState.max !== 1 ||
       layerState.color[0] != 1 ||
       layerState.color[1] != 1 ||
-      layerState.color[2] != 1 ||
-      !layerState.drawWhitePixels ||
-      !layerState.drawBlackPixels;
+      layerState.color[2] != 1;
 
   var fragmentShader, vertexShader;
 
   if (useColor) {
-    // If pixels should not be drawn a special fragment shader should be used
-    if (!layerState.drawBlackPixels) {
-        fragmentShader = ol.renderer.webgl.map.shader.ColorNoBlackFragment.getInstance();
-    } else if (!layerState.drawWhitePixels) {
-        fragmentShader = ol.renderer.webgl.map.shader.ColorNoWhiteFragment.getInstance();
-    } else {
-        fragmentShader = ol.renderer.webgl.map.shader.ColorFragment.getInstance();
-    }
+    fragmentShader = ol.renderer.webgl.map.shader.ColorFragment.getInstance();
     vertexShader = ol.renderer.webgl.map.shader.ColorVertex.getInstance();
   } else {
     fragmentShader =
@@ -194,12 +196,18 @@ ol.renderer.webgl.Layer.prototype.composeFrame = function(frameState, layerState
   var program = context.getProgram(fragmentShader, vertexShader);
 
   var locations;
-  if (!this.defaultLocations_) {
-    locations =
-        new ol.renderer.webgl.map.shader.Default.Locations(gl, program);
-    this.defaultLocations_ = locations;
+
+  if (useColor) {
+        locations =
+            new ol.renderer.webgl.map.shader.Color.Locations(gl, program);
   } else {
-    locations = this.defaultLocations_;
+      if (!this.defaultLocations_) {
+        locations =
+            new ol.renderer.webgl.map.shader.Default.Locations(gl, program);
+        this.defaultLocations_ = locations;
+      } else {
+        locations = this.defaultLocations_;
+      }
   }
 
   if (context.useProgram(program)) {
@@ -218,7 +226,13 @@ ol.renderer.webgl.Layer.prototype.composeFrame = function(frameState, layerState
       this.getProjectionMatrix());
 
   if (useColor) {
-    gl.uniformMatrix4fv(locations.u_colorMatrix, false,
+    // Set the new color-shader specific properties
+    // The location container can't be type casted to Color.Locations since
+    // Closure requires a inheritance-relationship for this to work.
+    // The typecast is thus just made to the general Object type.
+    var colorLocations = /** @type {Object} */ (locations);
+
+    gl.uniformMatrix4fv(colorLocations.u_colorMatrix, false,
         this.colorMatrix_.getMatrix(
             layerState.brightness,
             layerState.contrast,
@@ -226,11 +240,10 @@ ol.renderer.webgl.Layer.prototype.composeFrame = function(frameState, layerState
             layerState.saturation
         ));
 
-    // Push new properties to to GPU
     var col = layerState.color;
-    gl.uniform3f(locations.u_color, col[0], col[1], col[2]);
-    gl.uniform1f(locations.u_min, layerState.min);
-    gl.uniform1f(locations.u_max, layerState.max);
+    gl.uniform3f(colorLocations.u_color, col[0], col[1], col[2]);
+    gl.uniform1f(colorLocations.u_min, layerState.min);
+    gl.uniform1f(colorLocations.u_max, layerState.max);
    }
 
   gl.uniform1f(locations.u_opacity, layerState.opacity);
