@@ -20,6 +20,7 @@ goog.require('ol.layer.Image');
 goog.require('ol.layer.Layer');
 goog.require('ol.layer.Tile');
 goog.require('ol.layer.Vector');
+goog.require('ol.layer.VectorTile');
 goog.require('ol.render.Event');
 goog.require('ol.render.EventType');
 goog.require('ol.render.webgl.Immediate');
@@ -28,6 +29,7 @@ goog.require('ol.renderer.webgl.ImageLayer');
 goog.require('ol.renderer.webgl.Layer');
 goog.require('ol.renderer.webgl.TileLayer');
 goog.require('ol.renderer.webgl.VectorLayer');
+goog.require('ol.renderer.webgl.VectorTileLayer');
 goog.require('ol.source.State');
 goog.require('ol.structs.LRUCache');
 goog.require('ol.structs.PriorityQueue');
@@ -258,6 +260,15 @@ ol.renderer.webgl.Map.prototype.createLayerRenderer = function(layer) {
     return new ol.renderer.webgl.ImageLayer(this, layer);
   } else if (ol.ENABLE_TILE && layer instanceof ol.layer.Tile) {
     return new ol.renderer.webgl.TileLayer(this, layer);
+  } else if (ol.ENABLE_VECTOR_TILE && layer instanceof ol.layer.VectorTile) {
+    // TODO: Why is this typecast necessary?
+    // The compiler says that layer is of type ol.layer.Layer instead of
+    // the required ol.layer.VectorTile. The same problem does not arise
+    // when the other layer renderers are created that require e.g.
+    // ol.layer.Vector.
+    return new ol.renderer.webgl.VectorTileLayer(this, 
+      /** @type {ol.layer.VectorTile} */ (layer)
+    );
   } else if (ol.ENABLE_VECTOR && layer instanceof ol.layer.Vector) {
     return new ol.renderer.webgl.VectorLayer(this, layer);
   } else {
