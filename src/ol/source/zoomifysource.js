@@ -86,12 +86,14 @@ ol.source.Zoomify = function(opt_options) {
   }
   resolutions.reverse();
 
+  // var extent = [0, 0, size[0], size[1]];
   var extent = [0, -size[1], size[0], 0];
   var tileGrid = new ol.tilegrid.TileGrid({
     extent: extent,
     origin: ol.extent.getTopLeft(extent),
     resolutions: resolutions
   });
+  console.log(tileGrid);
 
   var url = options.url;
 

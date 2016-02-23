@@ -1274,7 +1274,7 @@ goog.inherits(ol.render.webgl.PolygonReplay, ol.render.VectorContext);
 /**
  * Draw one polygon.
  * @param {Array.<Array.<ol.Coordinate>>} coordinates
- * @param {ol.Color} fillColor
+ * @param {Array.<number>} fillColor Array of size 4. Each value ahs to be between 0 and one.
  * @private
  */
 ol.render.webgl.PolygonReplay.prototype.drawCoordinates_ =
@@ -1301,10 +1301,14 @@ ol.render.webgl.PolygonReplay.prototype.drawCoordinates_ =
     // this.vertices_.push(fillColor[0] / 255);
     // this.vertices_.push(fillColor[1] / 255);
     // this.vertices_.push(fillColor[2] / 255);
-    this.vertices_.push(fillColor[0]);
-    this.vertices_.push(fillColor[1]);
-    this.vertices_.push(fillColor[2]);
-    this.vertices_.push(fillColor[3]);
+    // this.vertices_.push(fillColor[0]);
+    // this.vertices_.push(fillColor[1]);
+    // this.vertices_.push(fillColor[2]);
+    // this.vertices_.push(fillColor[3]);
+    this.vertices_.push(1);
+    this.vertices_.push(0);
+    this.vertices_.push(0);
+    this.vertices_.push(0.5);
 
     // console.log(fillColor);
   }
@@ -1347,6 +1351,9 @@ ol.render.webgl.PolygonReplay.prototype.drawPolygonGeometry =
   } else {
     return;
   }
+
+  fillColor = [1, 0, 0, 0.5];
+
 
   var coordinates = polygonGeometry.getCoordinates();
   this.startIndices_.push(this.indices_.length);

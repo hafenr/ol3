@@ -47,12 +47,6 @@ ol.renderer.webgl.VectorTileLayer = function(mapRenderer, vectorLayer) {
    * @type {?ol.layer.LayerState}
    */
   this.layerState_ = null;
-
-  /**
-   * @private
-   * @type {ol.render.webgl.ReplayGroup}
-   */
-  this.replayGroup_ = null;
 };
 goog.inherits(ol.renderer.webgl.VectorTileLayer, ol.renderer.webgl.Layer);
 
@@ -63,9 +57,6 @@ goog.inherits(ol.renderer.webgl.VectorTileLayer, ol.renderer.webgl.Layer);
 ol.renderer.webgl.VectorTileLayer.prototype.prepareFrame =
     function(frameState, layerState, context) {
 
-  // var layer = /** @type {ol.layer.Vector} */ (this.getLayer());
-  // goog.asserts.assertInstanceof(layer, ol.layer.VectorTile,
-  //     'layer is an instance of ol.layer.VectorTile');
   var layer = this.getLayer();
   goog.asserts.assertInstanceof(layer, ol.layer.VectorTile,
       'layer is an instance of ol.layer.VectorTile');
@@ -88,13 +79,18 @@ ol.renderer.webgl.VectorTileLayer.prototype.prepareFrame =
   }
 
   var extent = frameState.extent;
+  if (layerState.extent) {
+    extent = ol.extent.getIntersection(extent, layerState.extent);
+  }
+  if (ol.extent.isEmpty(extent)) {
+    // Return false to prevent the rendering of the layer.
+    return false;
+  }
+
   var viewState = frameState.viewState;
   var projection = viewState.projection;
   var resolution = viewState.resolution;
   var pixelRatio = frameState.pixelRatio;
-  // var vectorLayerRevision = layer.getRevision();
-  // var vectorLayerRenderBuffer = layer.getRenderBuffer();
-  // var vectorLayerRenderOrder = layer.getRenderOrder();
 
   var tileGrid = source.getTileGrid();
 
@@ -106,7 +102,6 @@ ol.renderer.webgl.VectorTileLayer.prototype.prepareFrame =
   }
 
   var tileRange = tileGrid.getTileRangeForExtentAndZ(extent, z);
-  // console.log(tileRange);
 
   this.updateUsedTiles(frameState.usedTiles, source, z, tileRange);
   this.manageTilePyramid(frameState, source, tileGrid, pixelRatio,
@@ -190,15 +185,19 @@ ol.renderer.webgl.VectorTileLayer.prototype.prepareFrame =
  */
 ol.renderer.webgl.VectorTileLayer.prototype.createReplayGroup_ =
     function(tile, layer, resolution, extent, pixelRatio, context) {
-
   var revision = layer.getRevision();
   var renderOrder = layer.getRenderOrder() || null;
-
   var replayState = tile.getReplayState();
-  // if (!replayState.dirty && replayState.renderedRevision == revision &&
-  //     replayState.renderedRenderOrder == renderOrder) {
-  //   return;
-  // }
+
+  if (!replayState.dirty && replayState.renderedRevision == revision &&
+      replayState.renderedRenderOrder == renderOrder) {
+    return;
+  }
+
+  // FIXME dispose of old replayGroup in post render
+  goog.dispose(replayState.replayGroup);
+  replayState.replayGroup = null;
+  replayState.dirty = false;
 
   var tol = ol.renderer.vector.getTolerance(resolution, pixelRatio);
   var replayGroup = new ol.render.webgl.ReplayGroup(
@@ -217,10 +216,11 @@ ol.renderer.webgl.VectorTileLayer.prototype.createReplayGroup_ =
         styles = styleFunction(feature, resolution);
       }
     }
+    // FIXME, the style function is not returned properly
     styles = [
       new ol.style.Style({
           fill: new ol.style.Fill({
-              color: [255, 0, 0, 1]
+              color: [255, 0, 0, 0.5]
           }),
           stroke: new ol.style.Stroke({
               color: [255, 255, 255, 1]
@@ -241,7 +241,7 @@ ol.renderer.webgl.VectorTileLayer.prototype.createReplayGroup_ =
 
   replayState.renderedRevision = revision;
   replayState.renderedRenderOrder = renderOrder;
-  replayState.resolution = NaN;
+  replayState.resolution = resolution;
   replayState.replayGroup = replayGroup;
 }
 
@@ -251,30 +251,33 @@ ol.renderer.webgl.VectorTileLayer.prototype.createReplayGroup_ =
 ol.renderer.webgl.VectorTileLayer.prototype.composeFrame = function(frameState, layerState, context) {
 
   var tilesToDraw = this.renderedTiles_;
-
   var viewState = frameState.viewState;
 
-  var i, nTiles, replayState;
+  var i, nTiles, replayState, replayGroup;
+  var layer = /** @type {ol.layer.VectorTile} */ (layerState.layer);
+  var layerRevision = layer.getRevision();
+  var renderOrder = layer.getRenderOrder() || null;
+
   for (i = 0, nTiles = tilesToDraw.length; i < nTiles; ++i) {
     var tile = tilesToDraw[i];
+    
     replayState = tile.getReplayState();
-    replayState.replayGroup.replay(
-      context,
-      viewState.center, viewState.resolution, viewState.rotation,
-      frameState.size, frameState.pixelRatio, layerState.opacity,
-      layerState.managed ? frameState.skippedFeatureUids : {});
+    replayGroup = replayState.replayGroup;
+
+    if (replayGroup && !replayGroup.isEmpty()
+        // && !replayState.dirty
+        // && replayState.renderedRevision !== layerRevision
+        // && replayState.renderedRenderOrder !== renderOrder
+    ) {
+
+      replayState.replayGroup.replay(
+        context,
+        viewState.center, viewState.resolution, viewState.rotation,
+        frameState.size, frameState.pixelRatio, layerState.opacity,
+        layerState.managed ? frameState.skippedFeatureUids : {});
+
+    }
   }
-
-  // this.layerState_ = layerState;
-  // var viewState = frameState.viewState;
-  // var replayGroup = this.replayGroup_;
-  // if (replayGroup && !replayGroup.isEmpty()) {
-  //   replayGroup.replay(context,
-  //       viewState.center, viewState.resolution, viewState.rotation,
-  //       frameState.size, frameState.pixelRatio, layerState.opacity,
-  //       layerState.managed ? frameState.skippedFeatureUids : {});
-  // }
-
 };
 
 // /**
