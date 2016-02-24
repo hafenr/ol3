@@ -78,6 +78,7 @@ ol.renderer.webgl.VectorTileLayer.prototype.prepareFrame =
     return true;
   }
 
+  // Check if the layer is in view; if not the layer should not be rendered. 
   var extent = frameState.extent;
   if (layerState.extent) {
     extent = ol.extent.getIntersection(extent, layerState.extent);
@@ -114,6 +115,8 @@ ol.renderer.webgl.VectorTileLayer.prototype.prepareFrame =
   var tilesToDrawByZ = {};
   tilesToDrawByZ[z] = {};
 
+  // This function can be called with a zoom level and it will
+  // add loaded tiles to tilesToDrawByZ. It will be used later.
   var findLoadedTiles = this.createLoadedTileFinder(source, projection,
       tilesToDrawByZ);
 
@@ -122,6 +125,9 @@ ol.renderer.webgl.VectorTileLayer.prototype.prepareFrame =
   var tmpExtent = this.tmpExtent_;
   var tmpTileRange = new ol.TileRange(0, 0, 0, 0);
   var childTileRange, fullyLoaded, tile, tileState, x, y;
+
+  // Step though all tile coordinates that are within the current tile range
+  // that falls within the current extent.
   for (x = tileRange.minX; x <= tileRange.maxX; ++x) {
     for (y = tileRange.minY; y <= tileRange.maxY; ++y) {
 
@@ -136,8 +142,16 @@ ol.renderer.webgl.VectorTileLayer.prototype.prepareFrame =
         continue;
       }
 
+      // If the tilestate is ol.TileState.IDLE or ol.TileState.LOADING the following block is executed.
+      // Call the function findLoadedTiles for each parent tile range, i.e.
+      // each tilerange with [z-1, z-2, ..., minZoom] that contains the current tile
+      // range and the current zoom level.
+      // (This function will add tiles to the 'tilesToDrawByZ' hash).
+      // So if a tile is not loaded yet but one of its 'parent tiles' is, the parent tile is loaded instead.
       fullyLoaded = tileGrid.forEachTileCoordParentTileRange(
           tile.tileCoord, findLoadedTiles, null, tmpTileRange, tmpExtent);
+      // If none was found, the same is done for 'children' tile ranges that 
+      // are on the next higher zoom level.
       if (!fullyLoaded) {
         childTileRange = tileGrid.getTileCoordChildTileRange(
             tile.tileCoord, tmpTileRange, tmpExtent);
@@ -156,6 +170,8 @@ ol.renderer.webgl.VectorTileLayer.prototype.prepareFrame =
   zs.sort(ol.array.numberSafeCompareFunction);
   var replayables = [];
   var i, ii, currentZ, tileCoordKey, tilesToDraw;
+  // For each tile that should be drawn a replay group is created.
+  // The replay group is saved on the replayState attribute on the tile itself.
   for (i = 0, ii = zs.length; i < ii; ++i) {
     currentZ = zs[i];
     tilesToDraw = tilesToDrawByZ[currentZ];
@@ -168,6 +184,7 @@ ol.renderer.webgl.VectorTileLayer.prototype.prepareFrame =
     }
   }
 
+  // The tiles that should be rendered in the next composeFrame call.
   this.renderedTiles_ = replayables;
 
   return true;
@@ -189,8 +206,10 @@ ol.renderer.webgl.VectorTileLayer.prototype.createReplayGroup_ =
   var renderOrder = layer.getRenderOrder() || null;
   var replayState = tile.getReplayState();
 
-  if (!replayState.dirty && replayState.renderedRevision == revision &&
-      replayState.renderedRenderOrder == renderOrder) {
+  if (!replayState.dirty
+      && replayState.renderedRevision == revision
+      && replayState.renderedRenderOrder == renderOrder
+      && replayState.resolution == resolution) {
     return;
   }
 
@@ -205,6 +224,14 @@ ol.renderer.webgl.VectorTileLayer.prototype.createReplayGroup_ =
   );
 
   var self = this;
+  // Callback function that is executed for each feature to be rendered.
+  // This function should be called once for each replaygroup. It will
+  // call the renderFeature function of the vector rendered. This function 
+  // in turn will lookup the feature's type (e.g. Polygon) and will get/request a new 
+  // replay from the replaygroup (e.g. Polygon) replay. The replay is initialized by calling functions like drawPolygonGeometry.
+  // This function will for example triangulate the coordinates and add the 
+  // vertices to an array that can later be bound to a vertex buffer during the 'replay' call that is executed
+  // during composeFrame.
   var renderFeature = function(feature) {
     var styles;
     var styleFunction = feature.getStyleFunction();
@@ -264,8 +291,7 @@ ol.renderer.webgl.VectorTileLayer.prototype.composeFrame = function(frameState, 
     replayState = tile.getReplayState();
     replayGroup = replayState.replayGroup;
 
-    if (replayGroup && !replayGroup.isEmpty()
-        // && !replayState.dirty
+    if (replayGroup && !replayGroup.isEmpty() && !replayState.dirty
         // && replayState.renderedRevision !== layerRevision
         // && replayState.renderedRenderOrder !== renderOrder
     ) {
