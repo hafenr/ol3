@@ -1297,20 +1297,10 @@ ol.render.webgl.PolygonReplay.prototype.drawCoordinates_ =
     this.vertices_.push(vertices[2 * i]);
     this.vertices_.push(vertices[2 * i + 1]);
 
-    // FIXME: Find a way to provide different vertex color info for each feature, not a fillColor for the whole layer
-    // this.vertices_.push(fillColor[0] / 255);
-    // this.vertices_.push(fillColor[1] / 255);
-    // this.vertices_.push(fillColor[2] / 255);
-    // this.vertices_.push(fillColor[0]);
-    // this.vertices_.push(fillColor[1]);
-    // this.vertices_.push(fillColor[2]);
-    // this.vertices_.push(fillColor[3]);
-    this.vertices_.push(1);
-    this.vertices_.push(0);
-    this.vertices_.push(0);
-    this.vertices_.push(0.5);
-
-    // console.log(fillColor);
+    this.vertices_.push(fillColor[0]);
+    this.vertices_.push(fillColor[1]);
+    this.vertices_.push(fillColor[2]);
+    this.vertices_.push(fillColor[3]);
   }
 };
 
@@ -1351,9 +1341,6 @@ ol.render.webgl.PolygonReplay.prototype.drawPolygonGeometry =
   } else {
     return;
   }
-
-  fillColor = [1, 0, 0, 0.5];
-
 
   var coordinates = polygonGeometry.getCoordinates();
   this.startIndices_.push(this.indices_.length);

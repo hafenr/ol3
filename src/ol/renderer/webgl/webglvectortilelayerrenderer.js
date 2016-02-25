@@ -243,17 +243,7 @@ ol.renderer.webgl.VectorTileLayer.prototype.createReplayGroup_ =
         styles = styleFunction(feature, resolution);
       }
     }
-    // FIXME, the style function is not returned properly
-    styles = [
-      new ol.style.Style({
-          fill: new ol.style.Fill({
-              color: [255, 0, 0, 0.5]
-          }),
-          stroke: new ol.style.Stroke({
-              color: [255, 255, 255, 1]
-          })
-      })
-    ];
+
     if (styles) {
       var dirty = self.renderFeature(
           feature, resolution, pixelRatio, styles, replayGroup);
