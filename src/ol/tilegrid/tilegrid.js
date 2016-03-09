@@ -553,7 +553,6 @@ ol.tilegrid.createXYZ = function(opt_options) {
   delete options.maxZoom;
 
   var tilegrid = new ol.tilegrid.TileGrid(options);
-  console.log(tilegrid);
   return tilegrid;
 };
 
