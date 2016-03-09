@@ -92,7 +92,6 @@ ol.source.Zoomify = function(opt_options) {
     origin: ol.extent.getTopLeft(extent),
     resolutions: resolutions
   });
-  console.log(tileGrid);
 
   var url = options.url;
 
