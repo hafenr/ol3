@@ -20,6 +20,9 @@ void main(void) {
 
 //! FRAGMENT
 
+uniform float u_opacity;
+
 void main(void) {
   gl_FragColor = v_color;
+  gl_FragColor *= u_opacity;
 }
