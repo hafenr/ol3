@@ -9,8 +9,6 @@ goog.require('ol.renderer.webgl.Layer');
 goog.require('ol.layer.VectorTile');
 goog.require('ol.render.webgl.ReplayGroup');
 goog.require('ol.style.Style');
-goog.require('ol.style.Stroke');
-goog.require('ol.style.Fill');
 
 
 /**
