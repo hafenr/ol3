@@ -1062,10 +1062,6 @@ ol.render.webgl.LineStringReplay.prototype.getDeleteResourcesFunction =
  * @param {ol.Size} size Size.
  * @param {number} pixelRatio Pixel ratio.
  * @param {number} opacity Global opacity.
- * @param {number} brightness Global brightness.
- * @param {number} contrast Global contrast.
- * @param {number} hue Global hue.
- * @param {number} saturation Global saturation.
  * @param {Object} skippedFeaturesHash Ids of features to skip.
  * @param {function(ol.Feature): T|undefined} featureCallback Feature callback.
  * @param {boolean} oneByOne Draw features one-by-one for the hit-detecion.
@@ -1075,9 +1071,8 @@ ol.render.webgl.LineStringReplay.prototype.getDeleteResourcesFunction =
  * @template T
  */
 ol.render.webgl.LineStringReplay.prototype.replay = function(context,
-    center, resolution, rotation, size, pixelRatio,
-    opacity, brightness, contrast, hue, saturation, skippedFeaturesHash,
-    featureCallback, oneByOne, opt_hitExtent) {
+    center, resolution, rotation, size, pixelRatio, opacity, 
+    skippedFeaturesHash, featureCallback, oneByOne, opt_hitExtent) {
   var gl = context.getGL();
 
   // bind the vertices buffer
@@ -1414,10 +1409,6 @@ ol.render.webgl.PolygonReplay.prototype.getDeleteResourcesFunction =
  * @param {ol.Size} size Size.
  * @param {number} pixelRatio Pixel ratio.
  * @param {number} opacity Global opacity.
- * @param {number} brightness Global brightness.
- * @param {number} contrast Global contrast.
- * @param {number} hue Global hue.
- * @param {number} saturation Global saturation.
  * @param {Object} skippedFeaturesHash Ids of features to skip.
  * @param {function(ol.Feature): T|undefined} featureCallback Feature callback.
  * @param {boolean} oneByOne Draw features one-by-one for the hit-detecion.
@@ -1428,7 +1419,7 @@ ol.render.webgl.PolygonReplay.prototype.getDeleteResourcesFunction =
  */
 ol.render.webgl.PolygonReplay.prototype.replay = function(context,
     center, resolution, rotation, size, pixelRatio,
-    opacity, brightness, contrast, hue, saturation, skippedFeaturesHash,
+    opacity, skippedFeaturesHash,
     featureCallback, oneByOne, opt_hitExtent) {
   var gl = context.getGL();
 
@@ -1534,7 +1525,7 @@ ol.render.webgl.PolygonReplay.prototype.replay = function(context,
 
   this.lineStringReplay_.replay(context,
       center, resolution, rotation, size, pixelRatio,
-      opacity, brightness, contrast, hue, saturation, skippedFeaturesHash,
+      opacity, skippedFeaturesHash,
       featureCallback, oneByOne, opt_hitExtent);
   // FIXME get result
   return result;

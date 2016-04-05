@@ -264,6 +264,7 @@ ol.renderer.webgl.VectorTileLayer.prototype.createReplayGroup_ =
  * @inheritDoc
  */
 ol.renderer.webgl.VectorTileLayer.prototype.composeFrame = function(frameState, layerState, context) {
+  this.layerState_ = layerState;
 
   var tilesToDraw = this.renderedTiles_;
   var viewState = frameState.viewState;
@@ -366,3 +367,53 @@ ol.renderer.webgl.VectorTileLayer.prototype.renderFeature = function(feature, re
   }
   return loading;
 };
+
+
+/**
+ * @inheritDoc
+ */
+ol.renderer.webgl.VectorTileLayer.prototype.forEachFeatureAtCoordinate = function(coordinate, frameState, callback, thisArg) {
+  var noLayerStateSet = this.layerState_ === null;
+  var noTilesRendered = this.renderedTiles_.length === 0;
+  if (noLayerStateSet || noTilesRendered) {
+    return undefined;
+  } else {
+    // TODO: What to return from this branch?
+    var context = this.mapRenderer.getContext();
+    var viewState = frameState.viewState;
+    var layer = this.getLayer();
+    var layerState = this.layerState_;
+
+    /** @type {Object.<string, boolean>} */
+    var features = {};
+
+    /**
+     * @param {ol.Feature} feature Feature.
+     * @return {?} Callback result.
+     */
+    var hitCallbackWrapper = function(feature) {
+      goog.asserts.assert(feature !== undefined, 'received a feature');
+      var key = goog.getUid(feature).toString();
+      if (!(key in features)) {
+        features[key] = true;
+        return callback.call(thisArg, feature, layer);
+      }
+    };
+
+    var i, tile, replayState, replayGroup, rv;
+    var nTiles = this.renderedTiles_.length;
+    for (i = 0; i < nTiles; i++) {
+      tile = this.renderedTiles_[i];
+      replayState = tile.getReplayState();
+      replayGroup = replayState.replayGroup;
+
+      rv = replayGroup.forEachFeatureAtCoordinate(
+        coordinate, context, viewState.center, viewState.resolution,
+        viewState.rotation, frameState.size, frameState.pixelRatio,
+        layerState.opacity, layerState.managed ? frameState.skippedFeatureUids : {},
+        hitCallbackWrapper
+      );
+    }
+  }
+};
+
