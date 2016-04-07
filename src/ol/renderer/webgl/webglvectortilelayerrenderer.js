@@ -393,7 +393,21 @@ ol.renderer.webgl.VectorTileLayer.prototype.forEachFeatureAtCoordinate = functio
      */
     var hitCallbackWrapper = function(feature) {
       goog.asserts.assert(feature !== undefined, 'received a feature');
-      var key = goog.getUid(feature).toString();
+      // Features for tissuemaps (mapobjects) have a type and an id.
+      // Since only one feature should be reported in case they were overplotted
+      // tue to multiple tile requests, their id is saved inside a map
+      // to indicate whether the callback has been called for them already. 
+      var featureId = feature.getId();
+      var featureType = feature.get('type');
+      var isTmapsFeature = featureId !== undefined && featureType !== undefined;
+
+      var key;
+      if (isTmapsFeature) {
+        key = featureType + featureId;
+      } else {
+        key = goog.getUid(feature).toString();
+      }
+
       if (!(key in features)) {
         features[key] = true;
         return callback.call(thisArg, feature, layer);

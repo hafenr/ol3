@@ -42,8 +42,8 @@ ol.render.webgl.ReplayGroup = function(
   this.renderBuffer_ = opt_renderBuffer;
 
   /**
-   * ImageReplay only is supported at this point.
-   * @type {Object.<ol.render.ReplayType, ol.render.webgl.ImageReplay>}
+   * ImageReplay and PolygonReplay are supported at this point.
+   * @type {Object.<ol.render.ReplayType, ol.render.webgl.ImageReplay|ol.render.webgl.PolygonReplay>}
    * @private
    */
   this.replays_ = {};
