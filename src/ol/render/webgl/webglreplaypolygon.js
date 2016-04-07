@@ -130,49 +130,70 @@ ol.render.webgl.PolygonReplay = function(tolerance, maxExtent) {
   this.projectionMatrix_ = goog.vec.Mat4.createNumberIdentity();
 
   /**
+   * An array that holds all vertices of the triangulated geometry as well as
+   * the color values each vertex should have.
+   * For n vertices the format would look like the following:
+   *
+   * [x1, y1, r1, g1, b1, a1,
+   *  x2, y2, r2, g2, b2, a2, 
+   *  ...
+   *  xn, yn, rn, gn, bn, an]
+   *
+   * Before a draw call is executed this array is used to populate a vertexBuffer.
+   *
    * @type {Array.<number>}
    * @private
    */
   this.vertices_ = [];
 
   /**
+   * The vertex buffer populated form `vertices_` that is bound as an array buffer. 
    * @type {ol.webgl.Buffer}
    * @private
    */
   this.verticesBuffer_ = null;
 
   /**
-   * Start index per feature (the index).
+   * Start index per feature.
+   * Each index specifies where in the `vertices_` array the range of
+   * vertex attributes of a new feature starts.
    * @type {Array.<number>}
    * @private
    */
   this.startIndices_ = [];
 
   /**
-   * Start index per feature (the index).
+   * End index per feature.
+   * Each index specifies where in the `vertices_` array the range of
+   * vertex attributes of a new feature ends.
    * @type {Array.<number>}
    * @private
    */
   this.endIndices_ = [];
+
   /**
-   * Start index per feature (the feature).
+   * The features whose polygons are rendered by this replay.
+   * In this array a feature at position `i` has its range of vertex attributes
+   * in `vertices_` specified by the start and end indices `startIndices_[i]` and
+   * `endIndices_[i]`.
    * @type {Array.<ol.Feature>}
    * @private
    */
-  this.startIndicesFeature_ = [];
+  this.features_ = [];
 };
 goog.inherits(ol.render.webgl.PolygonReplay, ol.render.VectorContext);
 
 
 /**
- * Draw one polygon.
+ * Populate the vertex array for a polygon geometry.
  * @param {Array.<Array.<ol.Coordinate>>} coordinates
- * @param {Array.<number>} fillColor Array of size 4. Each value ahs to be between 0 and one.
+ * @param {Array.<number>} fillColor The fill color of the array.
+ *         This has to be an array of size 4 and each value has to be between 0 and one.
  * @private
  */
 ol.render.webgl.PolygonReplay.prototype.populateVerticesArray_ =
     function(coordinates, fillColor) {
-  // Triangulate the polgon
+  // Triangulate the polygon
   var triangulation = ol.ext.earcut(coordinates, true);
   var i, ii;
   var indices = triangulation.indices;
@@ -209,7 +230,7 @@ ol.render.webgl.PolygonReplay.prototype.drawMultiPolygonGeometry =
 
   var coordinatess = geometry.getCoordinates();
   this.startIndices_.push(this.indices_.length);
-  this.startIndicesFeature_.push(feature);
+  this.features_.push(feature);
   var i, ii;
   for (i = 0, ii = coordinatess.length; i < ii; i++) {
     this.populateVerticesArray_(coordinatess[i], this.fillColor_);
@@ -234,7 +255,7 @@ ol.render.webgl.PolygonReplay.prototype.drawPolygonGeometry =
   if (fillColor) {
     var coordinates = polygonGeometry.getCoordinates();
     this.startIndices_.push(this.indices_.length);
-    this.startIndicesFeature_.push(feature);
+    this.features_.push(feature);
     this.populateVerticesArray_(coordinates, fillColor);
     var endIndex = this.indices_.length;
     this.endIndices_.push(endIndex);
@@ -352,11 +373,11 @@ ol.render.webgl.PolygonReplay.prototype.replay = function(context,
 
   gl.uniform1f(locations.u_opacity, opacity);
 
-  // Structure of vertex attrib array:
+  // In this case the structure of a vertex attrib array looks like this:
   // [x1 y1 r1 g1 b1 a1 x2 y2 r2 g2 b2 a2....]
-  // Total length of attributes for one vertex:
-  // (2 positional + 4 color) * 4 bytes per int = 24
-  // Offset of color attribute pointer to positional attribute:
+  // The total length of attributes for one vertex is therefore calculated as:
+  // (2 positional attributes + 4 color attributes) * 4 bytes per int = 24
+  // Offset of color attributes pointer to positional attributes:
   // 2 positional attributes * 4 bytes per int = 8
   //
   // Enable the vertex attrib position arrays
@@ -389,7 +410,6 @@ ol.render.webgl.PolygonReplay.prototype.replay = function(context,
     // Set the blend function to additive blending for hit detection.
     // In this way one can detect wether a pixel was drawn with a color like (1, 1, 1, 0), i.e.
     // white with 100% opacity.
-    //
     gl.blendFunc(gl.ONE, gl.ONE);
     var elementType = context.hasOESElementIndexUint ?
         goog.webgl.UNSIGNED_INT : goog.webgl.UNSIGNED_SHORT;
@@ -401,7 +421,7 @@ ol.render.webgl.PolygonReplay.prototype.replay = function(context,
 
     while (featureIndex >= 0) {
 
-      feature = this.startIndicesFeature_[featureIndex];
+      feature = this.features_[featureIndex];
 
       featureUid = goog.getUid(feature).toString();
       dontSkipFeature = !goog.isDef(skippedFeaturesHash[featureUid]);
