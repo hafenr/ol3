@@ -119,6 +119,18 @@ ol.layer.Base.prototype.getBrightness = function() {
   return /** @type {number} */ (this.get(ol.layer.LayerProperty.BRIGHTNESS));
 };
 
+/**
+ * @param {number} brightness Brightness.
+ * @observable
+ * @api
+ */
+ol.layer.Base.prototype.setBrightness = function(brightness) {
+  this.set(ol.layer.LayerProperty.BRIGHTNESS, brightness);
+};
+goog.exportProperty(
+    ol.layer.Base.prototype,
+    'setBrightness',
+    ol.layer.Base.prototype.setBrightness);
 
 /**
  * Return the contrast of the layer.
@@ -129,7 +141,6 @@ ol.layer.Base.prototype.getBrightness = function() {
 ol.layer.Base.prototype.getContrast = function() {
   return /** @type {number} */ (this.get(ol.layer.LayerProperty.CONTRAST));
 };
-
 
 /**
  * Return the hue of the layer.
