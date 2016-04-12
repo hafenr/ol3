@@ -2,10 +2,10 @@ goog.provide('ol.layer.Base');
 goog.provide('ol.layer.LayerProperty');
 goog.provide('ol.layer.LayerState');
 
-goog.require('goog.object');
 goog.require('ol');
 goog.require('ol.Object');
 goog.require('ol.math');
+goog.require('ol.object');
 goog.require('ol.source.State');
 
 goog.require('goog.color.Rgb');
@@ -75,7 +75,7 @@ ol.layer.Base = function(options) {
   /**
    * @type {Object.<string, *>}
    */
-  var properties = goog.object.clone(options);
+  var properties = ol.object.assign({}, options);
   properties[ol.layer.LayerProperty.BRIGHTNESS] =
       options.brightness !== undefined ? options.brightness : 0;
   properties[ol.layer.LayerProperty.CONTRAST] =

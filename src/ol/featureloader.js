@@ -3,16 +3,11 @@ goog.provide('ol.FeatureUrlFunction');
 goog.provide('ol.featureloader');
 
 goog.require('goog.asserts');
-goog.require('goog.events');
-goog.require('goog.net.EventType');
-goog.require('goog.net.XhrIo');
-goog.require('goog.net.XhrIo.ResponseType');
 goog.require('ol.TileState');
 goog.require('ol.VectorTile');
 goog.require('ol.format.FormatType');
 goog.require('ol.proj');
 goog.require('ol.proj.Projection');
-goog.require('ol.proj.Units');
 goog.require('ol.xml');
 
 
@@ -68,59 +63,47 @@ ol.featureloader.loadFeaturesXhr = function(url, format, success, failure) {
        * @this {ol.source.Vector|ol.VectorTile}
        */
       function(extent, resolution, projection) {
-        var xhrIo = new goog.net.XhrIo();
-        xhrIo.setResponseType(
-            format.getType() == ol.format.FormatType.ARRAY_BUFFER ?
-                goog.net.XhrIo.ResponseType.ARRAY_BUFFER :
-                goog.net.XhrIo.ResponseType.TEXT);
-        goog.events.listen(xhrIo, goog.net.EventType.COMPLETE,
-            /**
-             * @param {Event} event Event.
-             * @private
-             * @this {ol.source.Vector}
-             */
-            function(event) {
-              var xhrIo = event.target;
-              goog.asserts.assertInstanceof(xhrIo, goog.net.XhrIo,
-                  'event.target/xhrIo is an instance of goog.net.XhrIo');
-              if (xhrIo.isSuccess()) {
-                var type = format.getType();
-                /** @type {Document|Node|Object|string|undefined} */
-                var source;
-                if (type == ol.format.FormatType.JSON) {
-                  source = xhrIo.getResponseText();
-                } else if (type == ol.format.FormatType.TEXT) {
-                  source = xhrIo.getResponseText();
-                } else if (type == ol.format.FormatType.XML) {
-                  if (!goog.userAgent.IE) {
-                    source = xhrIo.getResponseXml();
-                  }
-                  if (!source) {
-                    source = ol.xml.parse(xhrIo.getResponseText());
-                  }
-                } else if (type == ol.format.FormatType.ARRAY_BUFFER) {
-                  source = xhrIo.getResponse();
-                } else {
-                  goog.asserts.fail('unexpected format type');
-                }
-                if (source) {
-                  success.call(this, format.readFeatures(source,
-                      {featureProjection: projection}),
-                      format.readProjection(source));
-                } else {
-                  goog.asserts.fail('undefined or null source');
-                }
-              } else {
-                failure.call(this);
-              }
-              goog.dispose(xhrIo);
-            }, false, this);
-        if (goog.isFunction(url)) {
-          xhrIo.send(url(extent, resolution, projection));
-        } else {
-          xhrIo.send(url);
+        var xhr = new XMLHttpRequest();
+        xhr.open('GET',
+            goog.isFunction(url) ? url(extent, resolution, projection) : url,
+            true);
+        if (format.getType() == ol.format.FormatType.ARRAY_BUFFER) {
+          xhr.responseType = 'arraybuffer';
         }
-
+        /**
+         * @param {Event} event Event.
+         * @private
+         */
+        xhr.onload = function(event) {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            var type = format.getType();
+            /** @type {Document|Node|Object|string|undefined} */
+            var source;
+            if (type == ol.format.FormatType.JSON ||
+                type == ol.format.FormatType.TEXT) {
+              source = xhr.responseText;
+            } else if (type == ol.format.FormatType.XML) {
+              source = xhr.responseXML;
+              if (!source) {
+                source = ol.xml.parse(xhr.responseText);
+              }
+            } else if (type == ol.format.FormatType.ARRAY_BUFFER) {
+              source = /** @type {ArrayBuffer} */ (xhr.response);
+            } else {
+              goog.asserts.fail('unexpected format type');
+            }
+            if (source) {
+              success.call(this, format.readFeatures(source,
+                  {featureProjection: projection}),
+                  format.readProjection(source));
+            } else {
+              goog.asserts.fail('undefined or null source');
+            }
+          } else {
+            failure.call(this);
+          }
+        }.bind(this);
+        xhr.send();
       });
 };
 
@@ -142,14 +125,7 @@ ol.featureloader.tile = function(url, format) {
        * @this {ol.VectorTile}
        */
       function(features, dataProjection) {
-        var dataUnits = dataProjection.getUnits();
-        if (dataUnits === ol.proj.Units.TILE_PIXELS) {
-          var projection = new ol.proj.Projection({
-            code: this.getProjection().getCode(),
-            units: dataUnits
-          });
-          this.setProjection(projection);
-        }
+        this.setProjection(dataProjection);
         this.setFeatures(features);
       },
       /**

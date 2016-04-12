@@ -63,7 +63,7 @@ describe('ol.interaction.Select', function() {
   });
 
   afterEach(function() {
-    goog.dispose(map);
+    map.dispose();
     document.body.removeChild(target);
   });
 
@@ -78,16 +78,14 @@ describe('ol.interaction.Select', function() {
   function simulateEvent(type, x, y, opt_shiftKey) {
     var viewport = map.getViewport();
     // calculated in case body has top < 0 (test runner with small window)
-    var position = goog.style.getClientPosition(viewport);
+    var position = viewport.getBoundingClientRect();
     var shiftKey = opt_shiftKey !== undefined ? opt_shiftKey : false;
-    var event = new ol.MapBrowserPointerEvent(type, map,
-        new ol.pointer.PointerEvent(type,
-            new goog.events.BrowserEvent({
-              clientX: position.x + x + width / 2,
-              clientY: position.y + y + height / 2,
-              shiftKey: shiftKey
-            })));
-    map.handleMapBrowserEvent(event);
+    var event = new ol.pointer.PointerEvent(type, {
+      clientX: position.left + x + width / 2,
+      clientY: position.top + y + height / 2,
+      shiftKey: shiftKey
+    });
+    map.handleMapBrowserEvent(new ol.MapBrowserPointerEvent(type, map, event));
   }
 
   describe('constructor', function() {
@@ -131,6 +129,20 @@ describe('ol.interaction.Select', function() {
       var features = select.getFeatures();
       expect(features.getLength()).to.equal(1);
     });
+
+    it('select with shift single-click', function() {
+      var listenerSpy = sinon.spy(function(e) {
+        expect(e.selected).to.have.length(1);
+      });
+      select.on('select', listenerSpy);
+
+      simulateEvent(ol.MapBrowserEvent.EventType.SINGLECLICK, 10, -20, true);
+
+      expect(listenerSpy.callCount).to.be(1);
+
+      var features = select.getFeatures();
+      expect(features.getLength()).to.equal(1);
+    });
   });
 
   describe('multiselecting polygons', function() {
@@ -150,6 +162,20 @@ describe('ol.interaction.Select', function() {
       select.on('select', listenerSpy);
 
       simulateEvent(ol.MapBrowserEvent.EventType.SINGLECLICK, 10, -20);
+
+      expect(listenerSpy.callCount).to.be(1);
+
+      var features = select.getFeatures();
+      expect(features.getLength()).to.equal(4);
+    });
+
+    it('select with shift single-click', function() {
+      var listenerSpy = sinon.spy(function(e) {
+        expect(e.selected).to.have.length(4);
+      });
+      select.on('select', listenerSpy);
+
+      simulateEvent(ol.MapBrowserEvent.EventType.SINGLECLICK, 10, -20, true);
 
       expect(listenerSpy.callCount).to.be(1);
 
@@ -209,6 +235,24 @@ describe('ol.interaction.Select', function() {
         expect(features.item(0).get('type')).to.be('bar');
         expect(features.item(1).get('type')).to.be('bar');
       });
+
+      it('only selects features that pass the filter ' +
+         'using shift single-click', function() {
+        var select = new ol.interaction.Select({
+          multi: true,
+          filter: function(feature, layer) {
+            return feature.get('type') === 'bar';
+          }
+        });
+        map.addInteraction(select);
+
+        simulateEvent(ol.MapBrowserEvent.EventType.SINGLECLICK, 10, -20,
+            true);
+        var features = select.getFeatures();
+        expect(features.getLength()).to.equal(2);
+        expect(features.item(0).get('type')).to.be('bar');
+        expect(features.item(1).get('type')).to.be('bar');
+      });
     });
 
     describe('with multi set to false', function() {
@@ -226,8 +270,23 @@ describe('ol.interaction.Select', function() {
         expect(features.getLength()).to.equal(1);
         expect(features.item(0).get('type')).to.be('bar');
       });
-    });
 
+      it('only selects the first feature that passes the filter ' +
+         'using shift single-click', function() {
+        var select = new ol.interaction.Select({
+          multi: false,
+          filter: function(feature, layer) {
+            return feature.get('type') === 'bar';
+          }
+        });
+        map.addInteraction(select);
+        simulateEvent(ol.MapBrowserEvent.EventType.SINGLECLICK, 10, -20,
+            true);
+        var features = select.getFeatures();
+        expect(features.getLength()).to.equal(1);
+        expect(features.item(0).get('type')).to.be('bar');
+      });
+    });
   });
 
   describe('#getLayer(feature)', function() {
@@ -332,10 +391,6 @@ describe('ol.interaction.Select', function() {
   });
 });
 
-goog.require('goog.dispose');
-goog.require('goog.events');
-goog.require('goog.events.BrowserEvent');
-goog.require('goog.style');
 goog.require('ol.Collection');
 goog.require('ol.Feature');
 goog.require('ol.Map');

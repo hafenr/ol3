@@ -1,10 +1,9 @@
 goog.provide('ol.source.VectorTile');
 
-goog.require('goog.asserts');
-goog.require('goog.events');
-goog.require('goog.events.EventType');
 goog.require('ol.TileState');
 goog.require('ol.VectorTile');
+goog.require('ol.events');
+goog.require('ol.events.EventType');
 goog.require('ol.featureloader');
 goog.require('ol.source.UrlTile');
 
@@ -29,13 +28,12 @@ ol.source.VectorTile = function(options) {
 
   goog.base(this, {
     attributions: options.attributions,
-    cacheSize: ol.DEFAULT_TILE_CACHE_HIGH_WATER_MARK / 16,
+    cacheSize: options.cacheSize !== undefined ? options.cacheSize : 128,
     extent: options.extent,
     logo: options.logo,
     opaque: options.opaque,
     projection: options.projection,
-    state: options.state ?
-        /** @type {ol.source.State} */ (options.state) : undefined,
+    state: options.state,
     tileGrid: options.tileGrid,
     tileLoadFunction: options.tileLoadFunction ?
         options.tileLoadFunction : ol.source.VectorTile.defaultTileLoadFunction,
@@ -55,7 +53,7 @@ ol.source.VectorTile = function(options) {
   /**
    * @protected
    * @type {function(new: ol.VectorTile, ol.TileCoord, ol.TileState, string,
-   *        ol.format.Feature, ol.TileLoadFunctionType, ol.proj.Projection)}
+   *        ol.format.Feature, ol.TileLoadFunctionType)}
    */
   this.tileClass = options.tileClass ? options.tileClass : ol.VectorTile;
 
@@ -71,7 +69,6 @@ ol.source.VectorTile.prototype.getTile = function(z, x, y, pixelRatio, projectio
   if (this.tileCache.containsKey(tileCoordKey)) {
     return /** @type {!ol.Tile} */ (this.tileCache.get(tileCoordKey));
   } else {
-    goog.asserts.assert(projection, 'argument projection is truthy');
     var tileCoord = [z, x, y];
     var urlTileCoord = this.getTileCoordForTileUrlFunction(
         tileCoord, projection);
@@ -81,9 +78,9 @@ ol.source.VectorTile.prototype.getTile = function(z, x, y, pixelRatio, projectio
         tileCoord,
         tileUrl !== undefined ? ol.TileState.IDLE : ol.TileState.EMPTY,
         tileUrl !== undefined ? tileUrl : '',
-        this.format_, this.tileLoadFunction, projection);
-    goog.events.listen(tile, goog.events.EventType.CHANGE,
-        this.handleTileChange, false, this);
+        this.format_, this.tileLoadFunction);
+    ol.events.listen(tile, ol.events.EventType.CHANGE,
+        this.handleTileChange, this);
 
     this.tileCache.set(tileCoordKey, tile);
     return tile;
