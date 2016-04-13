@@ -27,7 +27,7 @@ goog.require('ol.render.webgl.polygonreplay.shader.Default');
  *
  * Preperation
  * -----------
- * drawPolygonGeometry(polygonGeometry, feature)
+ * drawPolygon(polygonGeometry, feature)
  *  - sets the replay-wide fill color (taken from the feature object)
  * populateVerticesArray_(coordinates, fillColor)
  *  - called for the polygon geometry and on the linestring replay
@@ -38,7 +38,7 @@ goog.require('ol.render.webgl.polygonreplay.shader.Default');
       The linereplay always uses the same color.
  *  - The start index where the coordinates and color values start for each triangle
  *    is stored inside the array indices_.
- *    End indices are stored inside endIndices_ (in function drawPolygonGeometry).
+ *    End indices are stored inside endIndices_ (in function drawPolygon).
  *
  * Replay
  * ----
@@ -222,7 +222,7 @@ ol.render.webgl.PolygonReplay.prototype.populateVerticesArray_ =
 /**
  * @inheritDoc
  */
-ol.render.webgl.PolygonReplay.prototype.drawMultiPolygonGeometry =
+ol.render.webgl.PolygonReplay.prototype.drawMultiPolygon =
     function(geometry, feature) {
   if (goog.isNull(this.fillColor_)) {
     return;
@@ -230,7 +230,7 @@ ol.render.webgl.PolygonReplay.prototype.drawMultiPolygonGeometry =
 
   var coordinatess = geometry.getCoordinates();
   this.startIndices_.push(this.indices_.length);
-  this.features_.push(feature);
+  this.features_.push(/** @type {ol.Feature} */ (feature));
   var i, ii;
   for (i = 0, ii = coordinatess.length; i < ii; i++) {
     this.populateVerticesArray_(coordinatess[i], this.fillColor_);
@@ -241,12 +241,12 @@ ol.render.webgl.PolygonReplay.prototype.drawMultiPolygonGeometry =
 /**
  * @inheritDoc
  */
-ol.render.webgl.PolygonReplay.prototype.drawPolygonGeometry =
+ol.render.webgl.PolygonReplay.prototype.drawPolygon =
     function(polygonGeometry, feature) {
   var fillColor;
   if (!goog.isNull(feature.getStyle())) {
       var color = feature.getStyle().getFill().getColor();
-      fillColor = ol.color.asArray(color);
+      fillColor = this.normalizeColor_(/** @type {ol.Color} */ (color));
   } else {
       fillColor = this.fillColor_;
   }
@@ -255,7 +255,7 @@ ol.render.webgl.PolygonReplay.prototype.drawPolygonGeometry =
   if (fillColor) {
     var coordinates = polygonGeometry.getCoordinates();
     this.startIndices_.push(this.indices_.length);
-    this.features_.push(feature);
+    this.features_.push(/** @type {ol.Feature} */ (feature));
     this.populateVerticesArray_(coordinates, fillColor);
     var endIndex = this.indices_.length;
     this.endIndices_.push(endIndex);
@@ -266,7 +266,7 @@ ol.render.webgl.PolygonReplay.prototype.drawPolygonGeometry =
     var linearRings = polygonGeometry.getLinearRings();
     var i, ii;
     for (i = 0, ii = linearRings.length; i < ii; i++) {
-      this.lineStringReplay_.drawLinearRingGeometry(linearRings[i]);
+      this.lineStringReplay_.drawLinearRing(linearRings[i]);
     }
   }
 };
@@ -489,18 +489,41 @@ ol.render.webgl.PolygonReplay.prototype.drawReplay_ =
 
 
 /**
+ * Convert a color to an array of normalized component values that WebGL
+ * understands. This function will divide every color components by 255.
+ * @private
+ * @param {ol.Color|string} color Color.
+ */
+ol.render.webgl.PolygonReplay.prototype.normalizeColor_ = function(color) {
+  var color_ = ol.color.asArray(/** @type {ol.Color} */ (color));
+  return color_.map(function(c, i) {
+    return i !== 3 ? c / 255.0 : c;
+  });
+};
+
+
+/**
  * @inheritDoc
  */
-
 ol.render.webgl.PolygonReplay.prototype.setFillStrokeStyle =
     function(fillStyle, strokeStyle) {
-  // TODO implement
-  if (!goog.isNull(fillStyle)) {
+
+  goog.asserts.assert(fillStyle || strokeStyle,
+    'fillStyle or strokeStyle should not be null');
+
+  if (fillStyle) {
     var fillStyleColor = fillStyle.getColor();
-    this.fillColor_ = !goog.isNull(fillStyleColor) ?
-        ol.color.asArray(fillStyleColor).map(function(c, i) {
-          return i != 3 ? c / 255.0 : c;
-        }) : [0.0, 0.0, 0.0, 1.0];
+    var fillColorNormalized;
+    var defaultFillColorNormalized = [0.0, 0.0, 0.0, 1.0];
+    if (fillStyleColor) {
+      // Since the color might be a string, the color has to be convereted to
+      // an array. fillStyle.getColor() could also return a ColorLike
+      // therefore this typecast is necessary.
+      fillColorNormalized = this.normalizeColor_(/** @type {ol.Color} */ (fillStyleColor));
+    } else {
+      fillColorNormalized = defaultFillColorNormalized;
+    }
+    this.fillColor_ = fillColorNormalized;
   } else {
     this.fillColor_ = null;
   }

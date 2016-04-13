@@ -1,6 +1,7 @@
 goog.provide('ol.renderer.webgl.VectorTileLayer');
 
 goog.require('ol.array');
+goog.require('goog.dispose');
 goog.require('ol.TileState');
 goog.require('ol.extent');
 goog.require('ol.Extent');
@@ -330,7 +331,7 @@ ol.renderer.webgl.VectorTileLayer.prototype.composeFrame = function(frameState, 
 
 /**
  * Handle changes in image style state.
- * @param {goog.events.Event} event Image style change event.
+ * @param {ol.events.Event|null} event Image style change event.
  * @private
  */
 ol.renderer.webgl.VectorTileLayer.prototype.handleStyleImageChange_ =
@@ -409,7 +410,7 @@ ol.renderer.webgl.VectorTileLayer.prototype.forEachFeatureAtCoordinate = functio
       }
 
       if (!(key in features)) {
-        features[key] = true;
+        features[/** @type {string} */ (key)] = true;
         return callback.call(thisArg, feature, layer);
       }
     };

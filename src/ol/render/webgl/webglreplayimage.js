@@ -243,12 +243,6 @@ ol.render.webgl.ImageReplay.prototype.getDeleteResourcesFunction = function(cont
 
 
 /**
- * @inheritDoc
- */
-ol.render.webgl.ImageReplay.prototype.drawAsync = goog.abstractMethod;
-
-
-/**
  * @param {Array.<number>} flatCoordinates Flat coordinates.
  * @param {number} offset Offset.
  * @param {number} end End.
@@ -368,9 +362,9 @@ ol.render.webgl.ImageReplay.prototype.drawCoordinates_ =
 /**
  * @inheritDoc
  */
-ol.render.webgl.ImageReplay.prototype.drawMultiPointGeometry = function(multiPointGeometry, feature) {
+ol.render.webgl.ImageReplay.prototype.drawMultiPoint = function(multiPointGeometry, feature) {
   this.startIndices_.push(this.indices_.length);
-  this.startIndicesFeature_.push(feature);
+  this.startIndicesFeature_.push(/** @type {ol.Feature} */ (feature));
   var flatCoordinates = multiPointGeometry.getFlatCoordinates();
   var stride = multiPointGeometry.getStride();
   this.drawCoordinates_(
@@ -381,9 +375,9 @@ ol.render.webgl.ImageReplay.prototype.drawMultiPointGeometry = function(multiPoi
 /**
  * @inheritDoc
  */
-ol.render.webgl.ImageReplay.prototype.drawPointGeometry = function(pointGeometry, feature) {
+ol.render.webgl.ImageReplay.prototype.drawPoint = function(pointGeometry, feature) {
   this.startIndices_.push(this.indices_.length);
-  this.startIndicesFeature_.push(feature);
+  this.startIndicesFeature_.push(/** @type {ol.Feature} */ (feature));
   var flatCoordinates = pointGeometry.getFlatCoordinates();
   var stride = pointGeometry.getStride();
   this.drawCoordinates_(

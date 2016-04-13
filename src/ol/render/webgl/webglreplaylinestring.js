@@ -99,7 +99,7 @@ ol.render.webgl.LineStringReplay.prototype.populateVerticesArray_ =
 /**
  * @inheritDoc
  */
-ol.render.webgl.LineStringReplay.prototype.drawLineStringGeometry =
+ol.render.webgl.LineStringReplay.prototype.drawLineString =
     function(geometry, feature) {
   this.populateVerticesArray_(geometry.getCoordinates());
 };
@@ -110,7 +110,7 @@ ol.render.webgl.LineStringReplay.prototype.drawLineStringGeometry =
  * prepare the drawing of its outline.
  * @param {ol.geom.LinearRing} geometry A linear ring geometry.
  */
-ol.render.webgl.LineStringReplay.prototype.drawLinearRingGeometry =
+ol.render.webgl.LineStringReplay.prototype.drawLinearRing =
     function(geometry) {
   this.populateVerticesArray_(geometry.getCoordinates());
 };
@@ -118,7 +118,7 @@ ol.render.webgl.LineStringReplay.prototype.drawLinearRingGeometry =
 /**
  * @inheritDoc
  */
-ol.render.webgl.LineStringReplay.prototype.drawMultiLineStringGeometry =
+ol.render.webgl.LineStringReplay.prototype.drawMultiLineString =
     function(geometry, feature) {
   var coordinatess = geometry.getCoordinates();
   var i, ii;
