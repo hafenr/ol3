@@ -101,6 +101,14 @@ ol.VectorTile.prototype.getContext = function() {
  * @inheritDoc
  */
 ol.VectorTile.prototype.disposeInternal = function() {
+  var replayGroup = this.replayState_.replayGroup;
+  // FIXME: prepareFrame might have saved the 3d context onto this replay state
+  // in order for clean up to work correctly. Check if a replay group was
+  // created for this tile and if the context was saved.
+  var context3d = this.replayState_['context3d'];
+  if (replayGroup && context3d) {
+    replayGroup.getDeleteResourcesFunction(context3d)();
+  }
   goog.base(this, 'disposeInternal');
 };
 

@@ -1,7 +1,7 @@
 goog.provide('ol.renderer.webgl.VectorTileLayer');
 
 goog.require('ol.array');
-goog.require('goog.dispose');
+// goog.require('goog.dispose');
 goog.require('ol.TileState');
 goog.require('ol.extent');
 goog.require('ol.Extent');
@@ -115,7 +115,9 @@ ol.renderer.webgl.VectorTileLayer.prototype.prepareFrame =
   tilesToDrawByZ[z] = {};
 
   // This function can be called with a zoom level and it will
-  // add loaded tiles to tilesToDrawByZ. It will be used later.
+  // add loaded tiles to tilesToDrawByZ. It will be used later in order to
+  // add already loaded tiles from higher and lower zoom levels to the list
+  // of tiles to be drawn. See below for more details.
   var findLoadedTiles = this.createLoadedTileFinder(source, projection,
       tilesToDrawByZ);
 
@@ -141,12 +143,14 @@ ol.renderer.webgl.VectorTileLayer.prototype.prepareFrame =
         continue;
       }
 
-      // If the tilestate is ol.TileState.IDLE or ol.TileState.LOADING the following block is executed.
+      // If the tilestate is ol.TileState.IDLE or ol.TileState.LOADING the
+      // following block is executed:
       // Call the function findLoadedTiles for each parent tile range, i.e.
-      // each tilerange with [z-1, z-2, ..., minZoom] that contains the current tile
-      // range and the current zoom level.
-      // (This function will add tiles to the 'tilesToDrawByZ' hash).
-      // So if a tile is not loaded yet but one of its 'parent tiles' is, the parent tile is loaded instead.
+      // each tilerange with [z-1, z-2, ..., minZoom] that contains the current
+      // tile range and the current zoom level.
+      // This function will add tiles to the 'tilesToDrawByZ' hash.
+      // So if a tile is not loaded yet but one of its parent tiles is, the
+      // parent tile is drawn instead.
       fullyLoaded = tileGrid.forEachTileCoordParentTileRange(
           tile.tileCoord, findLoadedTiles, null, tmpTileRange, tmpExtent);
       // If none was found, the same is done for 'children' tile ranges that 
@@ -169,6 +173,7 @@ ol.renderer.webgl.VectorTileLayer.prototype.prepareFrame =
   zs.sort(ol.array.numberSafeCompareFunction);
   var replayables = [];
   var i, ii, currentZ, tileCoordKey, tilesToDraw;
+  var newReplayGroup, oldReplayGroup;
   // For each tile that should be drawn a replay group is created.
   // The replay group is saved on the replayState attribute on the tile itself.
   for (i = 0, ii = zs.length; i < ii; ++i) {
@@ -176,9 +181,22 @@ ol.renderer.webgl.VectorTileLayer.prototype.prepareFrame =
     tilesToDraw = tilesToDrawByZ[currentZ];
     for (tileCoordKey in tilesToDraw) {
       tile = tilesToDraw[tileCoordKey];
+
       if (tile.getState() == ol.TileState.LOADED) {
         replayables.push(tile);
-        this.createReplayGroup_(tile, layer, resolution, extent, pixelRatio, context);
+
+        oldReplayGroup = tile.getReplayState().replayGroup;
+        newReplayGroup = this.createReplayGroupIfNecessary_(
+          tile, layer, resolution, extent, pixelRatio, context);
+
+        // Check if there already exists a replay group for this tile and 
+        // if a new one was created due to changed circumstances (changed
+        // view etc.).
+        // In this case, delete the old replay group after the render call.
+        if (newReplayGroup && oldReplayGroup) {
+          frameState.postRenderFunctions.push(
+              oldReplayGroup.getDeleteResourcesFunction(context));
+        }
       }
     }
   }
@@ -197,25 +215,31 @@ ol.renderer.webgl.VectorTileLayer.prototype.prepareFrame =
  * @param {ol.Extent} extent Extent.
  * @param {number} pixelRatio Pixel ratio.
  * @param {ol.webgl.Context} context WebGL context.
+ * @return {ol.render.webgl.ReplayGroup | null}
  * @private
  */
-ol.renderer.webgl.VectorTileLayer.prototype.createReplayGroup_ =
+ol.renderer.webgl.VectorTileLayer.prototype.createReplayGroupIfNecessary_ =
     function(tile, layer, resolution, extent, pixelRatio, context) {
   var revision = layer.getRevision();
   var renderOrder = layer.getRenderOrder() || null;
   var replayState = tile.getReplayState();
+  replayState['context3d'] = context;
 
+  // Check if a new replay group for this tile should be created.
+  // If the layer did not change (revision is the same), the render order was
+  // not altered, and the resolution didn't change, then the previous replay
+  // group should be kept (the 'dirty' will override this behavior).
   if (!replayState.dirty
       && replayState.renderedRevision == revision
       && replayState.renderedRenderOrder == renderOrder
       && replayState.resolution == resolution) {
-    return;
+    return null;
   }
 
   // FIXME dispose of old replayGroup in post render
-  goog.dispose(replayState.replayGroup);
-  replayState.replayGroup = null;
-  replayState.dirty = false;
+  // goog.dispose(replayState.replayGroup);
+  // replayState.replayGroup = null;
+  // replayState.dirty = false;
 
   var tol = ol.renderer.vector.getTolerance(resolution, pixelRatio);
   var replayGroup = new ol.render.webgl.ReplayGroup(
@@ -224,13 +248,14 @@ ol.renderer.webgl.VectorTileLayer.prototype.createReplayGroup_ =
 
   var self = this;
   // Callback function that is executed for each feature to be rendered.
-  // This function should be called once for each replaygroup. It will
-  // call the renderFeature function of the vector rendered. This function 
-  // in turn will lookup the feature's type (e.g. Polygon) and will get/request a new 
-  // replay from the replaygroup (e.g. Polygon) replay. The replay is initialized by calling functions like drawPolygonGeometry.
-  // This function will for example triangulate the coordinates and add the 
-  // vertices to an array that can later be bound to a vertex buffer during the 'replay' call that is executed
-  // during composeFrame.
+  // This function should be called once for each ReplayGroup.
+  // It will call the renderFeature function of the vector rendered.
+  // That function in turn will lookup the feature's type (e.g. Polygon)
+  // and will get/request a new replay from the ReplayGroup (e.g. Polygon).
+  // The replay is initialized by calling functions like drawPolygonGeometry.
+  // This will for example triangulate the coordinates and add the vertices to
+  // an array that can later be bound to a vertex buffer during the 'replay'
+  // call that is made during composeFrame.
   var renderFeature = function(feature) {
     var styles;
     var styleFunction = feature.getStyleFunction();
@@ -259,6 +284,8 @@ ol.renderer.webgl.VectorTileLayer.prototype.createReplayGroup_ =
   replayState.renderedRenderOrder = renderOrder;
   replayState.resolution = resolution;
   replayState.replayGroup = replayGroup;
+
+  return replayGroup;
 }
 
 /**
@@ -432,3 +459,17 @@ ol.renderer.webgl.VectorTileLayer.prototype.forEachFeatureAtCoordinate = functio
   }
 };
 
+/**
+ * @inheritDoc
+ */
+ol.renderer.webgl.VectorTileLayer.prototype.disposeInternal = function() {
+  var renderedTiles = this.renderedTiles_;
+  var i, replayGroup;
+  var nTiles = renderedTiles.length;
+  var context = this.mapRenderer.getContext();
+  for (i = 0; i < nTiles; i++) {
+    replayGroup = renderedTiles[i].getReplayState().replayGroup;
+    replayGroup.getDeleteResourcesFunction(context)();
+  }
+  goog.base(this, 'disposeInternal');
+};
