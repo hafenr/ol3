@@ -1,3 +1,5 @@
+goog.provide('ol.source.NonsquaredTile');
+
 goog.require('ol');
 goog.require('ol.ImageTile');
 goog.require('ol.TileState');
