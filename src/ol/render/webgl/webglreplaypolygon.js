@@ -106,12 +106,33 @@ ol.render.webgl.PolygonReplay = function(tolerance, maxExtent) {
   this.origin_ = ol.extent.getCenter(maxExtent);
 
   /**
+   * The array of indices with which to index into the vertex array to get
+   * the attributes (position & color) of each vertex. 
+   * For three features--i, j, k--this could look as follows:
+   *
+   * [i1 i2 i3 i4 i5 i6
+   *  j1 j2 j3 j4 j5 j6 j7 j8
+   *  k1 k2 k3 k4]
+   *
+   * this.vertices_[i1], this.vertices_[i2], ..., this.verties_[i6]
+   * would yield the attributes for all the vertices of feature1.
+   * Note that the indices can be the same (i.e. i2 == i6) when the positions
+   * of two vertices inside a feature polygon are the same.
+   * For more information see:
+   * http://www.opengl-tutorial.org/intermediate-tutorials/tutorial-9-vbo-indexing/
+   *
+   * The boundaries between vertices belonging to the different feature polygons
+   * are specified by this.startIndices_ and this.endIndices_.
+   * I.e., this.indices_[this.startIndices_[i]] to this.indices_[this.endIndices_[i]]
+   * are the indices of feature polygon `i`.
+   *  
    * @type {Array.<number>}
    * @private
    */
   this.indices_ = [];
 
   /**
+   * The buffer object for indices created using the indices array.
    * @type {ol.webgl.Buffer}
    * @private
    */
@@ -154,18 +175,14 @@ ol.render.webgl.PolygonReplay = function(tolerance, maxExtent) {
   this.verticesBuffer_ = null;
 
   /**
-   * Start index per feature.
-   * Each index specifies where in the `vertices_` array the range of
-   * vertex attributes of a new feature starts.
+   * Where a sequence of indices in this.indices_ starts for each feature.
    * @type {Array.<number>}
    * @private
    */
   this.startIndices_ = [];
 
   /**
-   * End index per feature.
-   * Each index specifies where in the `vertices_` array the range of
-   * vertex attributes of a new feature ends.
+   * Where a sequence of indices in this.indices_ ends for each feature.
    * @type {Array.<number>}
    * @private
    */
@@ -173,9 +190,9 @@ ol.render.webgl.PolygonReplay = function(tolerance, maxExtent) {
 
   /**
    * The features whose polygons are rendered by this replay.
-   * In this array a feature at position `i` has its range of vertex attributes
-   * in `vertices_` specified by the start and end indices `startIndices_[i]` and
-   * `endIndices_[i]`.
+   * In this array a feature at position `i` has its vertex attributes
+   * in `vertices_` specified by the range of indices in this.indices_ 
+   * from `startIndices_[i]` and to `endIndices_[i]`.
    * @type {Array.<ol.Feature>}
    * @private
    */
@@ -205,7 +222,10 @@ ol.render.webgl.PolygonReplay.prototype.populateVerticesArray_ =
   }
 
   // Add the color property to each vertex
-  // TODO performance: make it more efficient
+  // TODO: Could the colors be saved in a different array?
+  // As it is now, the colors are repeated for every single point!
+  
+  // The positions that may be shared between two different vertices. 
   var vertices = triangulation.vertices;
   for (i = 0, ii = vertices.length / 2; i < ii; ++i) {
     this.vertices_.push(vertices[2 * i]);
@@ -377,9 +397,9 @@ ol.render.webgl.PolygonReplay.prototype.replay = function(context,
   // In this case the structure of a vertex attrib array looks like this:
   // [x1 y1 r1 g1 b1 a1 x2 y2 r2 g2 b2 a2....]
   // The total length of attributes for one vertex is therefore calculated as:
-  // (2 positional attributes + 4 color attributes) * 4 bytes per int = 24
+  // (2 positional attributes + 4 color attributes) * 4 bytes per float = 24
   // Offset of color attributes pointer to positional attributes:
-  // 2 positional attributes * 4 bytes per int = 8
+  // 2 positional attributes * 4 bytes per float = 8
   //
   // Enable the vertex attrib position arrays
   gl.enableVertexAttribArray(locations.a_position);
@@ -473,7 +493,6 @@ ol.render.webgl.PolygonReplay.prototype.replay = function(context,
   // FIXME get result
   return result;
 };
-
 
 /**
  * @private
