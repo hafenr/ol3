@@ -75,19 +75,6 @@ ol.render.webgl.PointReplay = function(tolerance, maxExtent) {
   this.vertexAttributesBuffer_ = null;
 
   /**
-   * @type {Array.<number>}
-   * @private
-   */
-  this.indices_ = [];
-
-  /**
-   * The buffer object for indices created using the indices array.
-   * @type {ol.webgl.Buffer}
-   * @private
-   */
-  this.indicesBuffer_ = null;
-
-  /**
    * The features whose points are rendered by this replay.
    * @type {Array.<ol.Feature>}
    * @private
@@ -113,8 +100,6 @@ goog.inherits(ol.render.webgl.PointReplay, ol.render.VectorContext);
  */
 ol.render.webgl.PointReplay.prototype.populateVerticesArray_ =
     function(coordinate, fillColor, pointSize) {
-  // In this case indices are simply [0, 1, 2, 3, ....]
-  this.indices_.push(this.indices_.length);
   this.vertexAttributes_.push(coordinate[0]);
   this.vertexAttributes_.push(coordinate[1]);
   this.vertexAttributes_.push(fillColor[0]);
@@ -191,10 +176,6 @@ ol.render.webgl.PointReplay.prototype.finish = function(context) {
   // Create, bind, and populate the vertices buffer
   this.vertexAttributesBuffer_ = new ol.webgl.Buffer(this.vertexAttributes_);
   context.bindBuffer(goog.webgl.ARRAY_BUFFER, this.vertexAttributesBuffer_);
-
-  // Create, bind, and populate the vertices buffer
-  this.indicesBuffer_ = new ol.webgl.Buffer(this.indices_);
-  context.bindBuffer(goog.webgl.ELEMENT_ARRAY_BUFFER, this.indicesBuffer_);
 };
 
 
@@ -208,13 +189,8 @@ ol.render.webgl.PointReplay.prototype.getDeleteResourcesFunction =
       'verticesBuffer must not be null');
   var verticesBuffer = this.vertexAttributesBuffer_;
 
-  goog.asserts.assert(!goog.isNull(this.indicesBuffer_),
-      'indicesBuffer must not be null');
-  var indicesBuffer = this.indicesBuffer_;
-
   return function() {
     context.deleteBuffer(verticesBuffer);
-    context.deleteBuffer(indicesBuffer);
   };
 };
 
@@ -262,9 +238,6 @@ ol.render.webgl.PointReplay.prototype.replay = function(context,
   }
 
   gl.uniform1f(locations.u_opacity, opacity);
-
-  // Bind the indices buffer
-  context.bindBuffer(goog.webgl.ELEMENT_ARRAY_BUFFER, this.indicesBuffer_);
 
   //// Specify the vertex attributes
   // In this case the structure of a vertex attrib array looks like this:
@@ -346,11 +319,8 @@ ol.render.webgl.PointReplay.prototype.replay = function(context,
       if (dontSkipFeature && featureHasGeometry && featureIntersectsHitExtent) {
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-        var numItems = 1;
-        var offsetInBytes = featureIndex * elementSize;
-
         if (numItems > 0) {
-          gl.drawElements(goog.webgl.POINTS, numItems, elementType, offsetInBytes);
+          gl.drawArrays(goog.webgl.POINTS, featureIndex, 1);
         }
 
         result = featureCallback(feature);
@@ -391,8 +361,8 @@ ol.render.webgl.PointReplay.prototype.drawReplay_ =
   if (!goog.object.isEmpty(skippedFeaturesHash)) {
     // TODO: draw by blocks to skip features
   } else {
-    var numItems = this.indices_.length;
-    gl.drawElements(gl.POINTS, numItems, elementType, 0);
+    var numItems = this.features_.length;
+    gl.drawArrays(gl.POINTS, 0, numItems);
   }
 };
 
@@ -416,9 +386,6 @@ ol.render.webgl.PointReplay.prototype.normalizeColor_ = function(color) {
  */
 ol.render.webgl.PointReplay.prototype.setFillStrokeStyle =
     function(fillStyle, strokeStyle) {
-
-  goog.asserts.assert(fillStyle || strokeStyle,
-    'fillStyle or strokeStyle should not be null');
 
   if (fillStyle) {
     var fillStyleColor = fillStyle.getColor();
