@@ -27,7 +27,7 @@ ol.render.webgl.PointReplay = function(tolerance, maxExtent) {
    * @private
    * @type {number}
    */
-  this.pointSize_ = 10;
+  this.pointSize_ = 4;
 
   /**
    * The default fill color to use.
@@ -319,9 +319,7 @@ ol.render.webgl.PointReplay.prototype.replay = function(context,
       if (dontSkipFeature && featureHasGeometry && featureIntersectsHitExtent) {
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-        if (numItems > 0) {
-          gl.drawArrays(goog.webgl.POINTS, featureIndex, 1);
-        }
+        gl.drawArrays(goog.webgl.POINTS, featureIndex, 1);
 
         result = featureCallback(feature);
         if (result) {
