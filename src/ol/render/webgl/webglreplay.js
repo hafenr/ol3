@@ -10,6 +10,7 @@ goog.require('ol.webgl.Context');
 goog.require('ol.render.webgl.LineStringReplay');
 goog.require('ol.render.webgl.PolygonReplay');
 goog.require('ol.render.webgl.ImageReplay');
+goog.require('ol.render.webgl.PointReplay');
 
 
 /**
@@ -43,7 +44,7 @@ ol.render.webgl.ReplayGroup = function(
 
   /**
    * ImageReplay and PolygonReplay are supported at this point.
-   * @type {Object.<ol.render.ReplayType, ol.render.webgl.ImageReplay|ol.render.webgl.PolygonReplay>}
+   * @type {Object.<ol.render.ReplayType, ol.render.webgl.ImageReplay|ol.render.webgl.PolygonReplay|ol.render.webgl.PointReplay>}
    * @private
    */
   this.replays_ = {};
@@ -270,7 +271,8 @@ ol.render.webgl.ReplayGroup.prototype.hasFeatureAtCoordinate = function(
 ol.render.webgl.BATCH_CONSTRUCTORS_ = {
   'Image': ol.render.webgl.ImageReplay,
   'LineString': ol.render.webgl.LineStringReplay,
-  'Polygon': ol.render.webgl.PolygonReplay
+  'Polygon': ol.render.webgl.PolygonReplay,
+  'Point': ol.render.webgl.PointReplay
 };
 
 
