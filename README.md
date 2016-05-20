@@ -1,4 +1,4 @@
-# OpenLayers 3 supporting colorization of layers and additive layer blending
+# OpenLayers 3 extended with additional features
 
 This version of openlayers adds the following properties to layers:
 
@@ -25,6 +25,14 @@ All of the above properties can be passed to the layer's constructor like standa
 
 The properties are added like normal OpenLayers properties to the base class of all layers in the file: `ol/layer/layerbase.js` and to the type of the options that are passed to the constructors (`ol/externs/olx.js`).
 
+Additionally, this version provides:
+
+- WebGL-based rendering of polygon and point geometries
+- WebGL-based rendering of tiled vector layers
+
+A large part of the code enabling these features is based on code produced by
+camptocamp: http://www.camptocamp.com/en/actualite/openlayers-3-towards-many-vector-features-with-webgl-2/
+
 ## Development requirements
 
 Some of the build steps require Java 8. Also, make sure to
@@ -40,39 +48,6 @@ Should be something like:
     Java HotSpot(TM) 64-Bit Server VM (build 25.31-b07, mixed mode)
 
 Otherwise install Java 8 and if the output of `java -version` doesn't change check that `/usr/bin/java` points to `/Library/Internet\ Plug-Ins/JavaAppletPlugin.plugin/Contents/Home/bin/java`, rather than  `/System/Library/Frameworks/JavaVM.framework/Versions/Current/Commands/java`.
-
-## TODO
-
-### 1 - Artifacts
-
-When drawing maps with `drawBlackPixels` set to `false` a new fragment shader called ColorFragmentNoBlack is used. This leads to some strange black artifacts which consist of black pixels around drawn edges. This seems to be related to texture filtering.
-
-Changing the following lines in `ol/renderer/webgl/webgllayerrenderer.js` `bindFramebuffer`-method:
-
-    gl.texParameteri(goog.webgl.TEXTURE_2D, goog.webgl.TEXTURE_MAG_FILTER,
-        goog.webgl.LINEAR);
-    gl.texParameteri(goog.webgl.TEXTURE_2D, goog.webgl.TEXTURE_MIN_FILTER,
-        goog.webgl.LINEAR);
-
-to:
-
-    gl.texParameteri(goog.webgl.TEXTURE_2D,
-        goog.webgl.TEXTURE_MAG_FILTER, goog.webgl.NEAREST);
-    gl.texParameteri(goog.webgl.TEXTURE_2D,
-        goog.webgl.TEXTURE_MIN_FILTER, goog.webgl.NEAREST);
-
-removes some of them, but not all.
-
-For the moment just use additive blending for the segmentation layer.
-
-
-### Some further notes
-
-Colorization of the pixels is done in the fragment shader that is used when nonstandard image properties are used (e.g. an opacity unequal 1 or a color different from `[1, 1, 1]`).
-These changes were made directly in shader language in the file `ol/renderer/webgl/webglmapcolor.glsl`.
-**IMPORTANT**: OpenLayers generates a Shader javascript class by templating. The build tools have to be run after changes to the `glsl` files. Sometimes they won't template the new shader classes. If that's the case, delete the old shader class and run the build tools again.
-
-The newly added properties are pushed onto the GPU in the following file: `ol/renderer/webgl/webgllayerrenderer.js`.
 
 
 # OpenLayers 3 - original README
